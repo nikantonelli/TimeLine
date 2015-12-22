@@ -5,13 +5,6 @@ Ext.define('Rally.app.CustomTimeLineBar', {
     viewBox: false,
     draggable: false,
     height: 30,
-    style: {
-        font: '12px Helvetica, sans-serif',
-        borderColor:'#FFFFFF',
-        borderStyle:'solid',
-        borderWidth:'1px'
-
-    }
 });
 
 Ext.define('CustomApp', {
@@ -227,10 +220,14 @@ Ext.define('CustomApp', {
                         var startBetween = Ext.Date.between( start, stats.start, stats.end);
                         var endBetween = Ext.Date.between( end, stats.start, stats.end);
 
+                        //If there is no start date in the item, the timeline will go back forever!
+
                         if ( !startBetween && endBetween ){
                             record.leftMargin = 0;
                             record.width = (Ext.Date.getElapsed( stats.start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
                         }
+
+                        //If there is no end date in the item, the timeline will go on forever!
 
                         else if ( startBetween && !endBetween ) {
                             record.leftMargin = (Ext.Date.getElapsed( stats.start, start)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
@@ -242,7 +239,9 @@ Ext.define('CustomApp', {
                             record.width = (Ext.Date.getElapsed( start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
                         }
 
-                        timeLineBox.add(app._createBar(record));
+                        app._createBar(record);
+
+                        timeLineBox.add(record.bar);
 
                         var titleRec = {};
                         titleRec.colour = CustomApp.HdrColour;
@@ -299,8 +298,7 @@ Ext.define('CustomApp', {
         while (lDays <= stats.daysDuration) {
             record.title = Ext.Date.format(lDate, 'M Y');
             record.colour = CustomApp.HdrColour;
-            record.leftMargin = 2;
-            record.width = (this.self.DaysPerMonth[monthNum] * stats.pixelsPerDay) - record.leftMargin;
+            record.width = (this.self.DaysPerMonth[monthNum] * stats.pixelsPerDay);
             monthBox.add(this._createBar(record));
 
             lDays += this.self.DaysPerMonth[monthNum];
@@ -312,25 +310,25 @@ Ext.define('CustomApp', {
 
     _createBar: function( record ) {
 
-        var margin = '0 0 0 ' + record.leftMargin;
-        var bar =  Ext.create('Rally.app.CustomTimeLineBar', {
+        margin = '0 0 0 ' + record.leftMargin;
+        bar =  Ext.create('Rally.app.CustomTimeLineBar', {
             id: 'TimeLineBar-' + Ext.id(),
             margin: margin,
             html: record.title,
             width: record.width,
-        });
-        bar.style.backgroundColor = record.colour;
-        return bar;
-    },
+            style: {
+                font: '12px Helvetica, sans-serif',
+                borderColor:'#FFFFFF',
+                borderStyle:'solid',
+                borderWidth:'1px',
+                backgroundColor: record.colour
+            }
 
-    _drawTimeLines: function( ) {
-        var timeLineBox = Ext.getCmp('lineBox');
-        var record = {};
-        record.title = 'The title of the item';
-        record.colour =  CustomApp.ToDoColour;
-        record.leftMargin = 120;
-        record.width = 50;
-        timeLineBox.add(this._createBar(record));
+
+        });
+        record.bar = Ext.clone(bar);
+        console.log('record: ', record.title, ' bg: ', bar.style.backgroundColor);
+        return bar;
     },
 
     _headerRendered: function() {
