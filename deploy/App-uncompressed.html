@@ -13,7 +13,7 @@
     autoSize: true,
     viewBox: false,
     draggable: false,
-    height: 30
+    height: 30,
 });
 
 Ext.define('CustomApp', {
@@ -90,13 +90,13 @@ Ext.define('CustomApp', {
 
     _resetTreeBox: function(app) {
         var tb = Ext.getCmp('treeBox');
-        app._destroyBars(tb);
+        app._destroyBars(tb.id);
         tb.add( {
             xtype: 'timeLineBar',
-            title: 'Items',
+            html: 'Items',
             colour: CustomApp.HdrColour,
             width: '100%',
-            margin: 10
+            margin: '9 0 10 0'
         });
 
     },
@@ -110,6 +110,8 @@ Ext.define('CustomApp', {
      _resizeAllBars: function() {
         this._destroyBars('monthBox');
         this._drawMonthBars();
+        this._destroyBars('lineBox');
+        this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
     },
 
     launch: function() {
@@ -153,7 +155,6 @@ Ext.define('CustomApp', {
                 items: [
                     {
                         xtype: 'container',
-                        style: {borderColor:'#00FF00', borderStyle:'solid', borderWidth:'1px'},
                         id: 'treeBox',
                         width: this.self.TreeBoxWidth - 4, //Margin
                         autoScroll: false
@@ -171,8 +172,7 @@ Ext.define('CustomApp', {
                             {
                                 xtype: 'container',
                                 autoSize: true,
-                                id: 'lineBox',
-                                style: {borderColor:'#00FFFF', borderStyle:'solid', borderWidth:'1px'}
+                                id: 'lineBox'
                             }
                         ],
                         flex: 1,
@@ -188,65 +188,82 @@ Ext.define('CustomApp', {
         this.add(timeLineBox);
 
         //Whilst that is happening, fetch the roots (not tree!)
-        var pitype = Ext.getCmp('piType').on('select', function() {
-            var type = this.getRecord().get('TypePath');
 
-            var itemStore = Ext.create('Rally.data.wsapi.Store', {
-                model: type,
-                autoLoad: true,
-                listeners: {
-                    load: function(store, data, success) {
-                        var stats = app._calcTimeStats();
-                        var timeLineBox = Ext.getCmp('lineBox');
-                        var treeBox = Ext.getCmp('treeBox');
-                        app._destroyBars(timeLineBox.id);
-                        app._resetTreeBox(app);
+        //TODO
 
-                        _.each(data, function(item) {
-                            var record = {};
-                            record.colour = CustomApp.ToDoColour;
-                            record.title = '';
-                            record.width = 0;
-                            record.margin = 0;
-                            // The margin is set to the pixelsPerDay * something
-                            var start = new Date(item.get('PlannedStartDate'));
-                            var end = new Date(item.get('PlannedEndDate'));
+        var pitype = Ext.getCmp('piType').on('select', function() { app._redrawTimeLines(app, this.getRecord().get('TypePath')); });
+    },
 
-                            var startBetween = Ext.Date.between( start, stats.start, stats.end);
-                            var endBetween = Ext.Date.between( end, stats.start, stats.end);
+    onTimeBoxScopeChange: function(newScope) { this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath')); },
 
-                            if ( !startBetween && endBetween ){
-                                record.leftMargin = 0;
-                                record.width = (Ext.Date.getElapsed( stats.start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                            }
+    _redrawTimeLines: function(app, type ) {
 
-                            else if ( startBetween && !endBetween ) {
-                                record.leftMargin = (Ext.Date.getElapsed( stats.start, start)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                                record.width = (Ext.Date.getElapsed( start, stats.end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                            }
+        var filters = [];
+        var timeboxScope = app.getContext().getTimeboxScope();
+        if(timeboxScope) {
+            filters.push(timeboxScope.getQueryFilter());
+        }
 
-                            else if ( startBetween && endBetween) {
-                                record.leftMargin = (Ext.Date.getElapsed( stats.start, start)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                                record.width = (Ext.Date.getElapsed( start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                            }
+        var itemStore = Ext.create('Rally.data.wsapi.Store', {
+            model: type,
+            autoLoad: true,
+            filters: filters,
+            listeners: {
+                load: function(store, data, success) {
+                    var stats = app._calcTimeStats();
+                    var timeLineBox = Ext.getCmp('lineBox');
+                    var treeBox = Ext.getCmp('treeBox');
+                    app._destroyBars(timeLineBox.id);
+                    app._resetTreeBox(app);
 
-                            timeLineBox.add(app._createBar(record));
+                    _.each(data, function(item) {
+                        var record = {};
+                        record.colour = CustomApp.ToDoColour;
+                        record.title = '';
+                        record.width = 0;
+                        record.margin = 0;
+                        // The margin is set to the pixelsPerDay * something
+                        var start = new Date(item.get('PlannedStartDate'));
+                        var end = new Date(item.get('PlannedEndDate'));
 
-                            var titleRec = {};
-                            titleRec.colour = CustomApp.HdrColour;
-                            titleRec.leftMargin = 0;
-                            titleRec.width = '100%',
-                            titleRec.title = item.get('Name');
-                            treeBox.add(app._createBar(titleRec));
+                        var startBetween = Ext.Date.between( start, stats.start, stats.end);
+                        var endBetween = Ext.Date.between( end, stats.start, stats.end);
+
+                        //If there is no start date in the item, the timeline will go back forever!
+
+                        if ( !startBetween && endBetween ){
+                            record.leftMargin = 0;
+                            record.width = (Ext.Date.getElapsed( stats.start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                        }
+
+                        //If there is no end date in the item, the timeline will go on forever!
+
+                        else if ( startBetween && !endBetween ) {
+                            record.leftMargin = (Ext.Date.getElapsed( stats.start, start)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                            record.width = (Ext.Date.getElapsed( start, stats.end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                        }
+
+                        else if ( startBetween && endBetween) {
+                            record.leftMargin = (Ext.Date.getElapsed( stats.start, start)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                            record.width = (Ext.Date.getElapsed( start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                        }
+
+                        app._createBar(record);
+
+                        timeLineBox.add(record.bar);
+
+                        var titleRec = {};
+                        titleRec.colour = CustomApp.HdrColour;
+                        titleRec.leftMargin = 0;
+                        titleRec.width = '100%',
+                        titleRec.title = item.get('FormattedID') + ': ' + item.get('Name');
+                        treeBox.add(app._createBar(titleRec));
 
 
-                        });
-                    }
+                    });
                 }
-            });
+            }
         });
-
-
     },
 
 //        Ext.util.Observable.capture( pitype, function(event) { console.log( 'pitype:', arguments);});
@@ -280,10 +297,6 @@ Ext.define('CustomApp', {
 
         var record = {};
 
-        //Find all the existing month bars and remove them
-//TODO
-
-//debugger;
         var monthBox = Ext.getCmp('monthBox');
         stats = this._calcTimeStats();
 
@@ -294,8 +307,7 @@ Ext.define('CustomApp', {
         while (lDays <= stats.daysDuration) {
             record.title = Ext.Date.format(lDate, 'M Y');
             record.colour = CustomApp.HdrColour;
-            record.leftMargin = 2;
-            record.width = (this.self.DaysPerMonth[monthNum] * stats.pixelsPerDay) - record.leftMargin;
+            record.width = (this.self.DaysPerMonth[monthNum] * stats.pixelsPerDay);
             monthBox.add(this._createBar(record));
 
             lDays += this.self.DaysPerMonth[monthNum];
@@ -307,31 +319,25 @@ Ext.define('CustomApp', {
 
     _createBar: function( record ) {
 
-        var margin = '0 0 0 ' + record.leftMargin;
-        var bar =  Ext.create('Rally.app.CustomTimeLineBar', {
+        margin = '0 0 0 ' + record.leftMargin;
+        bar =  Ext.create('Rally.app.CustomTimeLineBar', {
             id: 'TimeLineBar-' + Ext.id(),
             margin: margin,
             html: record.title,
             width: record.width,
             style: {
-                color: '#000000',
-                backgroundColor: record.colour,
-                font: '12px Helvetica, sans-serif'
+                font: '12px Helvetica, sans-serif',
+                borderColor:'#FFFFFF',
+                borderStyle:'solid',
+                borderWidth:'1px',
+                backgroundColor: record.colour
             }
 
+
         });
-
+        record.bar = Ext.clone(bar);
+        console.log('record: ', record.title, ' bg: ', bar.style.backgroundColor);
         return bar;
-    },
-
-    _drawTimeLines: function( ) {
-        var timeLineBox = Ext.getCmp('lineBox');
-        var record = {};
-        record.title = 'The title of the item';
-        record.colour =  CustomApp.ToDoColour;
-        record.leftMargin = 120;
-        record.width = 50;
-        timeLineBox.add(this._createBar(record));
     },
 
     _headerRendered: function() {
