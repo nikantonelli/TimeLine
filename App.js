@@ -36,7 +36,7 @@ Ext.define('CustomApp', {
                             id: 'StartDate',
                             stateful: true,
                             fieldLabel: 'Start Date',
-                            value: Ext.Date.subtract( new Date(), Ext.Date.DAY, 90) // 90 days of previous iterations
+                            value: Ext.Date.subtract( new Date(), Ext.Date.DAY, 90) // 90 days of previous information
                         },
                         {
                             xtype: 'rallydatefield',
@@ -245,7 +245,6 @@ Ext.define('CustomApp', {
                         record.margin = 0;
 
                         var start = new Date((dstr = item.get('ActualStartDate'))? dstr : Ext.Date.now());
-                    debugger;
                         var end = new Date((dstr = item.get('ActualEndDate'))? dstr : Ext.Date.now());
 
                         var startBetween = Ext.Date.between( start, stats.start, stats.end);
@@ -346,18 +345,10 @@ Ext.define('CustomApp', {
             html: record.title,
             width: record.width,
             height: record.height || CustomApp.StandardBarHeight,
-            align: 'center',
-            style: {
-                font: '12px Helvetica, sans-serif',
-                borderColor:'#FFFFFF',
-                borderStyle:'solid',
-                borderWidth:'1px',
-                backgroundColor: record.colour,
-                textAlign: 'center',
-            }
-
-
+            align: 'center'
         });
+//debugger;
+        bar.setStyle({'backgroundColor' : record.colour});
 
         return bar;
     },
@@ -373,9 +364,55 @@ Ext.define('CustomApp', {
 Ext.define('Rally.app.CustomTimeLineBar', {
     extend: 'Ext.Component',
     alias: 'widget.timeLineBar',
-    autoSize: true,
-    viewBox: false,
-    draggable: false,
-    height: CustomApp.StandardBarHeight
+
+    constructor: function(config) {
+        this.mergeConfig(config);       //Style is not merged, just over-written! FIXME
+        this.callParent(arguments);
+    },
+
+    config: {
+        autoSize: true,
+        viewBox: false,
+        draggable: false,
+        height: CustomApp.StandardBarHeight,
+        style: {
+            font: '12px Helvetica, sans-serif',
+            borderColor:'#FFFFFF',
+            borderStyle:'solid',
+            borderWidth:'1px',
+            backgroundColor: CustomApp.HdrColour,
+            textAlign: 'center',
+        }
+
+    },
+
+//    renderTpl: this.getContentTpl(),
+//
+    getContentTpl: function() {
+        var me = this;
+
+        return Ext.create('Ext.XTemplate',
+            '<tpl if="this.canDrag()"><div class="icon drag"></div></tpl>',
+            '{[this.getActionsGear()]}',
+            '<div class="textContent ellipses">{[this.getFormattedId()]} {[this.getSeparator()]}{Name}</div>',
+            '<div class="rightSide">',
+            '</div>',
+            {
+                canDrag: function() {
+                    return me.getCanDrag();
+                },
+                getActionsGear: function() {
+                    return me._buildActionsGearHtml();
+                },
+                getFormattedId: function() {
+                    var record = me.getRecord();
+                    return record.getField('FormattedID') ? Rally.ui.renderer.RendererFactory.renderRecordField(record, 'FormattedID') : '';
+                },
+                getSeparator: function() {
+                    return this.getFormattedId() ? '- ' : '';
+                }
+            }
+        );
+    }
 });
 
