@@ -11,7 +11,7 @@ Ext.define('CustomApp', {
         HdrColour:   'lightgray',
         DataError:   'red',
         DaysPerMonth: [ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
-        TreeBoxWidth: 150,
+        TreeBoxWidth: 200,
         StandardBarHeight: 30
     },
 
@@ -77,7 +77,7 @@ Ext.define('CustomApp', {
         app._destroyBars(tb.id);
         tb.add( {
             xtype: 'timeLineBar',
-            html: 'Items',
+            html: 'Name',
             colour: CustomApp.HdrColour,
             width: '100%',
             margin: '10 0 10 0'
@@ -200,6 +200,8 @@ Ext.define('CustomApp', {
                     app._destroyBars(timeLineBox.id);
                     app._resetTreeBox(app);
 
+                    var today = new Date(); // Seize the day...
+
                     _.each(data, function(item) {
                         //We are creating two bars within the space of one, so reduce the height
 
@@ -212,7 +214,7 @@ Ext.define('CustomApp', {
                         box.addCls('tlBox');
                         box.height = CustomApp.StandardBarHeight;
 
-                        // Create bar for PlannedStart and PlannedEnd
+                        // Create bar for PlannedStart and PlannedEnd. TODO: store these records for later manipulation
                         var record = {};
                         record.colour = CustomApp.HdrColour;
                         record.title = '';
@@ -220,71 +222,174 @@ Ext.define('CustomApp', {
                         record.height = Math.floor(CustomApp.StandardBarHeight/2);
                         record.margin = 0;
 //debugger;
-                        var start = new Date(item.get('PlannedStartDate'));
-                        var end = new Date(item.get('PlannedEndDate'));
+
+
+                        var plannedStart = null;
+                        var plannedEnd = null;
 
                         //Are there incomplete data
                         if (!(item.get('PlannedStartDate') && item.get('PlannedEndDate'))) {
                             record.colour = CustomApp.DataError;
+                        } else {
+                            plannedStart = new Date(item.get('PlannedStartDate'));
+                            plannedEnd = new Date(item.get('PlannedEndDate'));
+
+                            startBetween = Ext.Date.between( plannedStart, stats.start, stats.end);
+                            endBetween = Ext.Date.between( plannedEnd, stats.start, stats.end);
+
+                            //If there is no start date in the item, the timeline will go back forever!
+
+                            if ( !startBetween && endBetween ){
+                                record.leftMargin = 0;
+                                record.width = (Ext.Date.getElapsed( stats.start, plannedEnd)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                            }
+
+                            //If there is no end date in the item, the timeline will go on forever!
+
+                            else if ( startBetween && !endBetween ) {
+                                record.leftMargin = (Ext.Date.getElapsed( stats.start, plannedStart)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                                record.width = (Ext.Date.getElapsed( plannedStart, stats.end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                            }
+
+                            else if ( startBetween && endBetween) {
+                                record.leftMargin = (Ext.Date.getElapsed( stats.start, plannedStart)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                                record.width = (Ext.Date.getElapsed( plannedStart, plannedEnd)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                            }
                         }
-
-                        var startBetween = Ext.Date.between( start, stats.start, stats.end);
-                        var endBetween = Ext.Date.between( end, stats.start, stats.end);
-
-                        //If there is no start date in the item, the timeline will go back forever!
-
-                        if ( !startBetween && endBetween ){
-                            record.leftMargin = 0;
-                            record.width = (Ext.Date.getElapsed( stats.start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                        }
-
-                        //If there is no end date in the item, the timeline will go on forever!
-
-                        else if ( startBetween && !endBetween ) {
-                            record.leftMargin = (Ext.Date.getElapsed( stats.start, start)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                            record.width = (Ext.Date.getElapsed( start, stats.end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                        }
-
-                        else if ( startBetween && endBetween) {
-                            record.leftMargin = (Ext.Date.getElapsed( stats.start, start)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                            record.width = (Ext.Date.getElapsed( start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                        }
-
                         var plannedBar = app._createBar(record);
                         plannedBar.addCls('planBar');
                         box.add(plannedBar);
 
                         // Create bar for ActualStart and ActualEnd
-                        record.colour = CustomApp.PassColour;
 
-                        var start = new Date((dstr = item.get('ActualStartDate'))? dstr : Ext.Date.now());
-                        var end = new Date((dstr = item.get('ActualEndDate'))? dstr : Ext.Date.now());
+                        var percentComplete = Math.floor(item.get('PercentDoneByStoryPlanEstimate') * 100);
+                        record.colour = CustomApp.ToDoColour;
+                        record.margin = 0;
+                        record.width = 0;
+                        record.title = '';
 
-                        var startBetween = Ext.Date.between( start, stats.start, stats.end);
-                        var endBetween = Ext.Date.between( end, stats.start, stats.end);
+                        //Let's see what colour it should be
 
-                        //If there is no start date in the item, the timeline will go back forever!
+                        if ((item.get('ActualStartDate') && item.get('ActualEndDate'))) {
+                            record.colour = CustomApp.DoneColour;
+                        } else {
 
-                        if ( !startBetween && endBetween ){
-                            record.leftMargin = 0;
-                            record.width = (Ext.Date.getElapsed( stats.start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                            if (item.get('ActualStartDate')) {
+                                record.title = percentComplete + '%';
+                                colourStart = item.get('ActualStartDate');
+                            } else if (item.get('PlannedEndDate')) {
+                                colourStart = item.get('PlannedStartDate');
+                            } else {
+                                colourStart = today;
+                            }
+
+                            if (item.get('ActualEndDate')){
+                                colourEnd = item.get('ActualEndDate');
+                            }
+                            else if (item.get('PlannedEndDate')) {
+                                colourEnd = item.get('PlannedEndDate');
+                            }
+                            else {
+                                colourEnd = today;
+                            }
+
+                            var totalElapsed = colourEnd - colourStart;
+
+                            //User params??
+                            var acceptanceDelay = totalElapsed * 0.2;
+                            var warningDelay    = totalElapsed * 0.2;
+
+                            colourStartDate = new Date(colourStart);
+                            colourEndDate = new Date(colourEnd);
+
+                            yellowXStart = Ext.Date.add(colourStartDate, Ext.Date.MILLI, acceptanceDelay);
+                            redXStart = Ext.Date.add(colourStartDate, Ext.Date.MILLI, acceptanceDelay + warningDelay);
+
+                            yellowSlope = 100 / (colourEnd - yellowXStart);
+                            redSlope = 100 / (colourEnd - redXStart);
+
+                            redThreshold =redSlope * (today - redXStart);
+                            yellowThreshold =yellowSlope * (today - yellowXStart);
+
+                            if (percentComplete < yellowThreshold ) {
+                                record.colour = CustomApp.WarnColour;
+                            }
+
+                            if (percentComplete < redThreshold ) {
+                                record.colour = CustomApp.ErrorColour;
+                            }
+
+                            if (today > colourEnd) {
+                                if (percentComplete >= 100) {
+                                    record.colour = CustomApp.DoneColour;
+                                }
+                                else {
+                                    record.colour = CustomApp.ErrorColour;
+                                }
+                            }
+
+                            //Now calculate the sizes and position
+
+                            var actualStart = new Date(item.get('ActualStartDate'));
+                            var actualEnd = new Date(item.get('ActualEndDate'));
+
+                            startBetween = Ext.Date.between( actualStart, stats.start, stats.end);
+                            endBetween = Ext.Date.between( actualEnd, stats.start, stats.end);
+
+                           //If there is no start date in the item, the timeline will go back forever!
+                            if ( !startBetween && endBetween ){
+                                record.leftMargin = 0;
+                                record.width = (Ext.Date.getElapsed( stats.start, actualEnd?actualEnd:today)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                            }
+
+                            //If there is no end date in the item, the timeline will go on forever!
+
+                            else if ( startBetween && !endBetween ) {
+                                record.leftMargin = (Ext.Date.getElapsed( stats.start, actualStart)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                                record.width = (Ext.Date.getElapsed( actualStart, item.get('ActualEndDate')?stats.end:today)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                            }
+
+                            else if ( startBetween && endBetween) {
+                                record.leftMargin = (Ext.Date.getElapsed( stats.start, actualStart)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                                record.width = (Ext.Date.getElapsed( actualStart, actualEnd)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
+                            }
+
+                            var actualBar = app._createBar(record);
+                            actualBar.addCls('actualBar');
+                            box.add(actualBar);
+                            timeLineBox.add(box);
                         }
 
-                        //If there is no end date in the item, the timeline will go on forever!
+                        //Based on a general algorithm, set the colour
 
-                        else if ( startBetween && !endBetween ) {
-                            record.leftMargin = (Ext.Date.getElapsed( stats.start, start)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                            record.width = (Ext.Date.getElapsed( start, stats.end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                        }
-
-                        else if ( startBetween && endBetween) {
-                            record.leftMargin = (Ext.Date.getElapsed( stats.start, start)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                            record.width = (Ext.Date.getElapsed( start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
-                        }
-
-                        var actualBar = app._createBar(record);
-                        box.add(actualBar);
-                        timeLineBox.add(box);
+//                        var totalElapsed = Ext.Date.getElapsed(plannedStart, plannedEnd);
+//                        var acceptanceDelay = totalElapsed * 0.2;
+//                        var warningDelay    = totalElapsed * 0.2;
+//                        var today = new Date();
+//
+//                        if (percentComplete >= 100) {
+//                            record.colour = CustomApp.DoneColour;
+//                        } else {
+//                            var redXStart = Ext.Date.add(plannedStart, Ext.Date.MILLI, acceptanceDelay + warningDelay);
+//                            var redSlope = Math.min(100, 100.0 /Ext.Date.getElapsed(plannedEnd - redXStart));
+//                            if (redXStart < today) {
+//                                //Need to check whether we are in the red
+//                                var percentNeeded = Ext.Date.getElapsed(redXStart, today) * redSlope;
+//                                if (percentNeeded >= percentComplete) {
+//                                    record.Colour = CustomApp.ErrorColour;
+//                                } else {
+//                                    //Now we might be in the yellow
+//                                    var yellowXStart = Ext.Date.add(plannedStart, Ext.Date.MILLI, acceptanceDelay);
+//                                    var yellowSlope = 100/Ext.Date.getElapsed(plannedEnd - yellowXStart);
+//                                    percentNeeded = Math.min(100, Ext.Date.geElapsed(yellowXStart, today) * yellowSlope);
+//                                    if (percentNeeded >= percentComplete) {
+//                                        record.Colour = CustomApp.WarnColour;
+//                                    }
+//                                }
+//                            }
+//                        }
+//
+//
 
                         var titleRec = {};
                         titleRec.colour = CustomApp.HdrColour;
@@ -339,7 +444,7 @@ Ext.define('CustomApp', {
         lDate = stats.start;
         lDays = 0;
 
-        while (lDays <= stats.daysDuration) {
+        while (lDays < stats.daysDuration) {
             record.title = Ext.Date.format(lDate, 'M Y');
             record.colour = CustomApp.HdrColour;
             record.width = (this.self.DaysPerMonth[monthNum] * stats.pixelsPerDay);
@@ -365,7 +470,8 @@ Ext.define('CustomApp', {
             html: record.title,
             width: record.width,
             height: record.height || CustomApp.StandardBarHeight,
-            align: 'center'
+            align: 'center',
+            valign: 'middle'
         });
 //debugger;
         bar.setStyle({'backgroundColor' : record.colour});
@@ -397,11 +503,8 @@ Ext.define('Rally.app.CustomTimeLineBar', {
         height: CustomApp.StandardBarHeight,
         style: {
             font: '12px Helvetica, sans-serif',
-//            borderColor:'#FFFFFF',
-//            borderStyle:'solid',
-//            borderWidth:'1px',
             backgroundColor: CustomApp.HdrColour,
-            textAlign: 'center',
+            textAlign: 'center'
         }
 
     },
