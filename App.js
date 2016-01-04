@@ -9,6 +9,7 @@ Ext.define('CustomApp', {
         DoneColour:  'silver',
         ToDoColour:  'salmon',
         HdrColour:   'lightgray',
+        DataError:   'red',
         DaysPerMonth: [ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
         TreeBoxWidth: 150,
         StandardBarHeight: 30
@@ -79,7 +80,7 @@ Ext.define('CustomApp', {
             html: 'Items',
             colour: CustomApp.HdrColour,
             width: '100%',
-            margin: '9 0 10 0'
+            margin: '10 0 10 0'
         });
 
     },
@@ -202,16 +203,30 @@ Ext.define('CustomApp', {
                     _.each(data, function(item) {
                         //We are creating two bars within the space of one, so reduce the height
 
+                        //Create a container to hold the bars
+
+                        var box = Ext.create('Ext.container.Container', {
+                            id: 'timeLineBox-' + item.get('FormattedID')
+                        });
+
+                        box.addCls('tlBox');
+                        box.height = CustomApp.StandardBarHeight;
+
                         // Create bar for PlannedStart and PlannedEnd
                         var record = {};
                         record.colour = CustomApp.HdrColour;
                         record.title = '';
                         record.width = 0;
-                        record.height = CustomApp.StandardBarHeight/2;
+                        record.height = Math.floor(CustomApp.StandardBarHeight/2);
                         record.margin = 0;
-
+//debugger;
                         var start = new Date(item.get('PlannedStartDate'));
                         var end = new Date(item.get('PlannedEndDate'));
+
+                        //Are there incomplete data
+                        if (!(item.get('PlannedStartDate') && item.get('PlannedEndDate'))) {
+                            record.colour = CustomApp.DataError;
+                        }
 
                         var startBetween = Ext.Date.between( start, stats.start, stats.end);
                         var endBetween = Ext.Date.between( end, stats.start, stats.end);
@@ -234,15 +249,13 @@ Ext.define('CustomApp', {
                             record.leftMargin = (Ext.Date.getElapsed( stats.start, start)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
                             record.width = (Ext.Date.getElapsed( start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
                         }
-                        timeLineBox.add(app._createBar(record));
+
+                        var plannedBar = app._createBar(record);
+                        plannedBar.addCls('planBar');
+                        box.add(plannedBar);
 
                         // Create bar for ActualStart and ActualEnd
-                        var record = {};
                         record.colour = CustomApp.PassColour;
-                        record.title = '';
-                        record.height = CustomApp.StandardBarHeight/2;
-                        record.width = 0;
-                        record.margin = 0;
 
                         var start = new Date((dstr = item.get('ActualStartDate'))? dstr : Ext.Date.now());
                         var end = new Date((dstr = item.get('ActualEndDate'))? dstr : Ext.Date.now());
@@ -268,15 +281,19 @@ Ext.define('CustomApp', {
                             record.leftMargin = (Ext.Date.getElapsed( stats.start, start)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
                             record.width = (Ext.Date.getElapsed( start, end)/ (24 * 3600 * 1000)) * stats.pixelsPerDay;
                         }
-                        timeLineBox.add(app._createBar(record));
+
+                        var actualBar = app._createBar(record);
+                        box.add(actualBar);
+                        timeLineBox.add(box);
 
                         var titleRec = {};
                         titleRec.colour = CustomApp.HdrColour;
                         titleRec.leftMargin = 0;
                         titleRec.width = '100%',
                         titleRec.title = item.get('FormattedID') + ': ' + item.get('Name');
-                        treeBox.add(app._createBar(titleRec));
-
+                        var titleBox = app._createBar(titleRec);
+                        titleBox.addCls('tltBox');
+                        treeBox.add(titleBox);
 
                     });
                 }
@@ -326,7 +343,10 @@ Ext.define('CustomApp', {
             record.title = Ext.Date.format(lDate, 'M Y');
             record.colour = CustomApp.HdrColour;
             record.width = (this.self.DaysPerMonth[monthNum] * stats.pixelsPerDay);
-            monthBox.add(this._createBar(record));
+
+            mnth = this._createBar(record);
+            mnth.addCls('mnthBox');
+            monthBox.add(mnth);
 
             lDays += this.self.DaysPerMonth[monthNum];
             lDate = Ext.Date.add(lDate, Ext.Date.DAY, this.self.DaysPerMonth[monthNum]);
@@ -366,7 +386,7 @@ Ext.define('Rally.app.CustomTimeLineBar', {
     alias: 'widget.timeLineBar',
 
     constructor: function(config) {
-        this.mergeConfig(config);       //Style is not merged, just over-written! FIXME
+        this.mergeConfig(config);       //Style is not merged, just over-written! Use setStyle instead.
         this.callParent(arguments);
     },
 
@@ -377,9 +397,9 @@ Ext.define('Rally.app.CustomTimeLineBar', {
         height: CustomApp.StandardBarHeight,
         style: {
             font: '12px Helvetica, sans-serif',
-            borderColor:'#FFFFFF',
-            borderStyle:'solid',
-            borderWidth:'1px',
+//            borderColor:'#FFFFFF',
+//            borderStyle:'solid',
+//            borderWidth:'1px',
             backgroundColor: CustomApp.HdrColour,
             textAlign: 'center',
         }

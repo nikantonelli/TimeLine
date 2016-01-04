@@ -1,3 +1,21 @@
 .app {
      /* Add app styles here */
 }
+
+.tlBox {
+    border-bottom: 1px solid #99BBE8;
+    height: 30px;
+}
+
+.planBar {
+    background-image: url(Images/progressbar.png);
+    repeat-y: 
+}
+
+.tltBox {
+    border-bottom: 1px solid #99BBE8;
+}
+
+.mnthBox {
+    border-left: 1px solid #99BBE8;
+}
