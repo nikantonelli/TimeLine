@@ -107,7 +107,7 @@
         this._destroyBars('releaseBox');
         this._destroyBars('iterationBox');
         this._drawMonthBars();
-        this._releaseRendered();
+        this._releaseRender();
         this._destroyBars('lineBox');
         this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
     },
@@ -175,7 +175,7 @@
                             'end': thisEnd,
                             'colour': CustomApp.HdrColour,
                             'title': release.get('Name')
-                        }
+                        };
                         boxes.push(box);
                     });
 
