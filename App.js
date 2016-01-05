@@ -7,7 +7,7 @@ Ext.define('CustomApp', {
         WarnColour:  'orangered',
         PassColour:  'lightgreen',
         DoneColour:  'silver',
-        ToDoColour:  'salmon',
+        ToDoColour:  'lightblue',
         HdrColour:   'lightgray',
         DataError:   'red',
         DaysPerMonth: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
@@ -76,9 +76,10 @@ Ext.define('CustomApp', {
     _resetTreeBox: function(app) {
         var tb = Ext.getCmp('treeBox');
         app._destroyBars(tb.id);
+
         tb.add( {
             xtype: 'timeLineBar',
-            html: 'Name',
+            html: 'Calendar Month:',
             colour: CustomApp.HdrColour,
             width: '100%',
             margin: '0 0 10 0'
@@ -94,10 +95,131 @@ Ext.define('CustomApp', {
 
      _resizeAllBars: function() {
         this._destroyBars('monthBox');
+        this._destroyBars('releaseBox');
+        this._destroyBars('iterationBox');
         this._drawMonthBars();
+        this._releaseRender();
         this._destroyBars('lineBox');
         this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
     },
+
+
+    _iterationRender: function() {
+    },
+
+    _releaseRender: function() {
+
+        var app = this;
+
+        var relStore = Ext.create('Rally.data.wsapi.Store', {
+            model: 'release',
+            autoLoad: true,
+            context: {
+                project: Rally.environment.getContext().getProjectRef(),
+                projectScopeUp: false,
+                projectScopeDown: false
+            },
+            sorters: [{
+                property: 'ReleaseDate',
+                direction: 'ASC'
+            }],
+            listeners: {
+                load: function(store, data, success) {
+                    //Create a list of items removing gaps between releases (shouldn't be any apart from the day of handover)
+
+                    var releaseBox = Ext.getCmp('releaseBox');
+                    var boxes = [];
+
+                    if (data.length > 0){
+                        var tb = Ext.getCmp('treeBox');
+                        tb.insert(0, {
+                            xtype: 'timeLineBar',
+                            width: '100%',
+                            html : 'Program Increment:',
+                            colour : CustomApp.HdrColour
+                        });
+                    }
+
+                    _.each(data, function(release) {
+
+                        var thisStart = Ext.Date.clearTime(release.get('ReleaseStartDate'));
+                        var thisEnd = Ext.Date.clearTime(Ext.Date.add(release.get('ReleaseDate'), Ext.Date.HOUR, 1)); //Takes you up to the end of the day
+
+                        if ((lastBox = boxes[boxes.length-1])) {
+                            //Check the date of the last one and if needed, add a spacer
+                            if (lastBox.end != thisStart) {
+                                var spacerBox = {
+                                    'width': (Ext.Date.getElapsed( lastBox.end, thisStart)* stats.pixelsPerDay)/(24 * 3600 * 1000),
+                                    'start': lastBox.end,
+                                    'leftMargin': 0,
+                                    'end': thisStart,
+                                    'colour': CustomApp.ToDoColour,
+                                    'title': ''
+                                };
+                                boxes.push(spacerBox);
+                            }
+                        }
+                        var box = {
+                            'width': (Ext.Date.getElapsed( thisEnd, thisStart)* stats.pixelsPerDay)/(24 * 3600 * 1000),
+                            'leftMargin': 0,
+                            'start': thisStart,
+                            'end': thisEnd,
+                            'colour': CustomApp.HdrColour,
+                            'title': release.get('Name')
+                        };
+                        boxes.push(box);
+                    });
+
+                    //Now truncate the list of boxes depending on the display time
+
+                    _.each(boxes, function(box) {
+                        if (!((box.end < stats.start) || (box.start > stats.end))) {    //Somewhere in view
+                            if (box.start < stats.start) {
+                                box.start = stats.start;
+                                if (box.start > box.end) {
+                                    box.width = 0;
+                                } else {
+                                    box.width = (Ext.Date.getElapsed( box.end, box.start)* stats.pixelsPerDay)/(24 * 3600 * 1000);
+                                }
+                            }
+                            if (box.end > stats.end) {
+                                box.end = stats.end;
+                                if ( box.end < box.start) {
+                                    box.width = 0;
+                                } else {
+                                    box.width = (Ext.Date.getElapsed( box.end, box.start)* stats.pixelsPerDay)/(24 * 3600 * 1000);
+                                }
+                            }
+
+                            var theBar = app._createBar(box);
+                            theBar.addCls('mnthBox');
+                            theBar.addCls('tltBox');
+
+                            releaseBox.add(theBar);
+                        }
+                    });
+                }
+            }
+        });
+    },
+
+//    _createBar: function( record ) {
+//
+//        var margin = '0 0 0 ' + record.leftMargin;
+//
+//        var bar =  Ext.create('Rally.app.CustomTimeLineBar', {
+//            id: 'TimeLineBar-' + Ext.id(),
+//            margin: margin,
+//            html: record.title,
+//            width: record.width,
+//            height: record.height || CustomApp.StandardBarHeight,
+//            align: 'center'
+//        });
+//        bar.setStyle({'backgroundColor' : record.colour});
+//
+//        return bar;
+//    },
+//
 
     launch: function() {
 
@@ -135,6 +257,7 @@ Ext.define('CustomApp', {
 
         //Define a box to the left for the item tree and a box to the right that has the lines in
 
+
         var timeLineBox = Ext.create('Ext.container.Container', {
                 layout: 'hbox',
                 items: [
@@ -147,13 +270,23 @@ Ext.define('CustomApp', {
                     },
                     {
                         xtype: 'container',
+                        id: 'scrollBox',
                         layout: 'vbox',
                         items: [
                             {
                                 xtype: 'container',
+                                id: 'releaseBox',
+                                layout: 'hbox'
+                            },
+                            {
+                                xtype: 'container',
+                                id: 'iteration',
+                                layout: 'hbox'
+                            },
+                            {
+                                xtype: 'container',
                                 id: 'monthBox',
-                                layout: 'hbox',
-                                margin: '0 0 0 0'
+                                layout: 'hbox'
                             },
                             {
                                 xtype: 'container',
@@ -256,6 +389,10 @@ Ext.define('CustomApp', {
                     var timeLineBox = Ext.getCmp('lineBox');
                     var treeBox = Ext.getCmp('treeBox');
                     app._destroyBars(timeLineBox.id);
+                    app._destroyBars(Ext.getCmp('releaseBox'));
+                    app._destroyBars(Ext.getCmp('iterationBox'));
+                    app._releaseRender();
+                    app._iterationRender();
                     app._resetTreeBox(app);
 
                     app._addMilestoneBox(app);
@@ -407,9 +544,12 @@ Ext.define('CustomApp', {
             redThreshold =redSlope * (today - redXStart);
             yellowThreshold =yellowSlope * (today - yellowXStart);
 
-            if (percentComplete < yellowThreshold ) {
             if (percentComplete < redThreshold ) {
                 aRecord.colour = CustomApp.ErrorColour;
+            }
+
+            if (percentComplete < yellowThreshold ) {
+                aRecord.colour = CustomApp.WarnColour;
             }
 
             if (today > colourEnd) {
@@ -472,6 +612,7 @@ Ext.define('CustomApp', {
 
         stats.daysDuration = (stats.end - stats.start)/ (24 * 3600 * 1000);
         stats.daysDuration = (stats.daysDuration > 31) ? stats.daysDuration : 31 ;   //One more than the biggest month to make sure we show correctly
+        var pixelsPerDay = (Ext.getBody().getWidth() - this.self.TreeBoxWidth) / (stats.daysDuration > 0 ? stats.daysDuration : 1) * this.zoomLevel;
         stats.pixelsPerDay = pixelsPerDay > 1 ? pixelsPerDay : 1;
 
         return stats;
