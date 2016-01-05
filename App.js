@@ -70,6 +70,24 @@ Ext.define('CustomApp', {
         }
     ],
 
+    getSettingsFields: function() {
+
+        var returnVal = [{
+                xtype: 'rallycheckboxfield',
+                name: 'percentageType',
+                fieldLabel: 'Use story points for percentages:',
+                stateful: true,
+                stateId: 'percent-' + Ext.id(),
+                labelAlign: 'right',
+                labelWidth: 200
+
+            }
+        ];
+
+        return returnVal;
+
+    },
+
     //Define a pixel factor for the zoom
     zoomLevel: 1,
 
@@ -486,8 +504,13 @@ Ext.define('CustomApp', {
 
         // Create bar for ActualStart and ActualEnd
         var aRecord = {};
+        var percentComplete = 0;
 
-        var percentComplete = Math.floor(item.get('PercentDoneByStoryPlanEstimate') * 100);
+        if ( app.getSetting('percentageType')) {
+            percentComplete = Math.floor(item.get('PercentDoneByStoryPlanEstimate') * 100);
+        } else {
+            percentComplete = Math.floor(item.get('PercentDoneByStoryCount') * 100);
+        }
         aRecord.colour = CustomApp.PassColour;
         aRecord.height = Math.floor(CustomApp.StandardBarHeight/2);
         aRecord.leftMargin = 0;
