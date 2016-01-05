@@ -360,11 +360,15 @@ Ext.define('CustomApp', {
             style: {
                 backgroundColor: CustomApp.MileStoneBoxColour
             },
-            margin: margin
-        });
-        Ext.create('Ext.tip.ToolTip', {
-            target: todayIcon,
-            html: 'Today: ' + Ext.Date.format(new Date(), 'D M Y')
+            margin: margin,
+            listeners: {
+                afterrender: function() {
+                    Ext.create('Rally.ui.tooltip.ToolTip', {
+                        target : this.getEl(),
+                        html: 'Today: ' + Ext.Date.format(new Date(), 'D M Y')
+                    });
+                }
+            }
         });
 
         todayIcon.addCls('todayIcon');
