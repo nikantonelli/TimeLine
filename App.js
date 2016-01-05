@@ -408,9 +408,6 @@ Ext.define('CustomApp', {
             yellowThreshold =yellowSlope * (today - yellowXStart);
 
             if (percentComplete < yellowThreshold ) {
-                aRecord.colour = CustomApp.WarnColour;
-            }
-
             if (percentComplete < redThreshold ) {
                 aRecord.colour = CustomApp.ErrorColour;
             }
@@ -475,7 +472,6 @@ Ext.define('CustomApp', {
 
         stats.daysDuration = (stats.end - stats.start)/ (24 * 3600 * 1000);
         stats.daysDuration = (stats.daysDuration > 31) ? stats.daysDuration : 31 ;   //One more than the biggest month to make sure we show correctly
-        var pixelsPerDay = (this.getWidth() - this.self.TreeBoxWidth) / (stats.daysDuration > 0 ? stats.daysDuration : 1) * this.zoomLevel;
         stats.pixelsPerDay = pixelsPerDay > 1 ? pixelsPerDay : 1;
 
         return stats;
