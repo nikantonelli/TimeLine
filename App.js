@@ -175,7 +175,6 @@ Ext.define('CustomApp', {
         //Whilst that is happening, fetch the roots (not tree!)
 
         //TODO
-console.log('launch: kicking off');
 
         var pitype = Ext.getCmp('piType').on('select', function() { app._redrawTimeLines(app, this.getRecord().get('TypePath')); });
         this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
@@ -194,16 +193,12 @@ console.log('launch: kicking off');
             filters.push(timeboxScope.getQueryFilter());
         }
 
-console.log('_redrawTimeLines: creating store');
-
         var itemStore = Ext.create('Rally.data.wsapi.Store', {
             model: type,
             autoLoad: true,
             filters: filters,
             listeners: {
                 load: function(store, data, success) {
-
-console.log('_redrawTimeLines: loading store');
 
                     var timeLineBox = Ext.getCmp('lineBox');
                     var treeBox = Ext.getCmp('treeBox');
@@ -214,11 +209,9 @@ console.log('_redrawTimeLines: loading store');
                     _.each(data, function(item) {
 
                         tlbox = app._createTimeLineForItem(app, item);
-console.log( tlbox );
                         timeLineBox.add(tlbox);
 
                         ttbox = app._createTitleBoxForItem(app, item);
-console.log( ttbox );
                         treeBox.add(ttbox);
 
                     });
