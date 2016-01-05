@@ -298,7 +298,7 @@ Ext.define('CustomApp', {
                             },
                             {
                                 xtype: 'container',
-                                id: 'iteration',
+                                id: 'iterationBox',
                                 layout: 'hbox'
                             },
                             {
@@ -407,8 +407,8 @@ Ext.define('CustomApp', {
                     var timeLineBox = Ext.getCmp('lineBox');
                     var treeBox = Ext.getCmp('treeBox');
                     app._destroyBars(timeLineBox.id);
-                    app._destroyBars(Ext.getCmp('releaseBox'));
-                    app._destroyBars(Ext.getCmp('iterationBox'));
+                    app._destroyBars(Ext.getCmp('releaseBox').id);
+                    app._destroyBars(Ext.getCmp('iterationBox').id);
                     app._releaseRender();
                     app._iterationRender();
                     app._resetTreeBox(app);
