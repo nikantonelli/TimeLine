@@ -175,8 +175,11 @@ Ext.define('CustomApp', {
         //Whilst that is happening, fetch the roots (not tree!)
 
         //TODO
+console.log('launch: kicking off');
 
         var pitype = Ext.getCmp('piType').on('select', function() { app._redrawTimeLines(app, this.getRecord().get('TypePath')); });
+        this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
+
     },
 
     onTimeBoxScopeChange: function(newScope) {
