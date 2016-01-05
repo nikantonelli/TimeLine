@@ -12,7 +12,8 @@ Ext.define('CustomApp', {
         DataError:   'red',
         DaysPerMonth: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
         TreeBoxWidth: 200,
-        StandardBarHeight: 30
+        StandardBarHeight: 30,
+        MileStoneBoxColour: 'red'
     },
 
     items: [
@@ -176,13 +177,61 @@ Ext.define('CustomApp', {
 
         //TODO
 
-        var pitype = Ext.getCmp('piType').on('select', function() { app._redrawTimeLines(app, this.getRecord().get('TypePath')); });
-        this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
+        var pitype = Ext.getCmp('piType');
+
+        pitype.on('select', function() { app._redrawTimeLines(app, this.getRecord().get('TypePath')); });
+
+        if (pitype.rendered){
+            this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
+        }
 
     },
 
     onTimeBoxScopeChange: function(newScope) {
         this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
+    },
+
+    // Modify the title box popup if the data is invalid
+    _dataCheckItem: function(app, box, item) {
+
+    },
+
+    _addToday: function(app) {
+        var msbox = Ext.getCmp('milestoneBox');
+        var linebox = Ext.getCmp('lineBox');
+
+        //Create a thing to add to month box
+
+        var margin = '0 0 0 ' + ((Ext.Date.getElapsed( stats.start, new Date())* stats.pixelsPerDay)/(24 * 3600 * 1000) - 4);
+        todayIcon = Ext.create('Ext.container.Container', {
+            height: '10px',
+            width: '10px',
+            style: {
+                backgroundColor: CustomApp.MileStoneBoxColour
+            },
+            margin: margin
+        });
+        Ext.create('Ext.tip.ToolTip', {
+            target: todayIcon,
+            html: 'Today: ' + Ext.Date.format(new Date(), 'D M Y')
+        });
+
+        todayIcon.addCls('todayIcon');
+        msbox.add(todayIcon);
+
+        //Create a thing to add to lineBox
+        todayLine = Ext.create('Ext.container.Container', {
+            height: linebox.getHeight(),
+            width: '1px',
+            border: 1,
+            style: {
+                borderColor: '#000000',
+                borderStyle: 'solid',
+                backgroundColor: '#000000'
+            },
+            margin: '0 0 0 ' + (Ext.Date.getElapsed( stats.start, new Date())* stats.pixelsPerDay)/(24 * 3600 * 1000)
+        });
+        msbox.add(todayLine);
     },
 
     _redrawTimeLines: function(app, type ) {
@@ -197,6 +246,10 @@ Ext.define('CustomApp', {
             model: type,
             autoLoad: true,
             filters: filters,
+            sorters: [{
+                property: 'rank',
+                direction: 'ASC'
+            }],
             listeners: {
                 load: function(store, data, success) {
 
@@ -212,9 +265,11 @@ Ext.define('CustomApp', {
                         timeLineBox.add(tlbox);
 
                         ttbox = app._createTitleBoxForItem(app, item);
+                        app._dataCheckItem(app, ttbox, item);
                         treeBox.add(ttbox);
 
                     });
+                    app._addToday(app);
                 }
             }
         });
@@ -302,10 +357,17 @@ Ext.define('CustomApp', {
         aRecord.width = 0;
         aRecord.title = '';
 
+        var actualStart = new Date(item.get('ActualStartDate'));
+        var actualEnd = new Date(item.get('ActualEndDate'));
+
         //Let's see what colour it should be
 
         if ((item.get('ActualStartDate') && item.get('ActualEndDate'))) {
             aRecord.colour = CustomApp.DoneColour;
+            aRecord.title = percentComplete + '%';
+            aRecord.leftMargin = (Ext.Date.getElapsed( stats.start, actualStart)* stats.pixelsPerDay)/(24 * 3600 * 1000);
+            aRecord.width = (Ext.Date.getElapsed( actualStart, actualEnd)* stats.pixelsPerDay)/(24 * 3600 * 1000);
+
         } else {
 
             if (item.get('ActualStartDate')) {
@@ -364,9 +426,6 @@ Ext.define('CustomApp', {
 
             //Now calculate the sizes and position
 
-            var actualStart = new Date(item.get('ActualStartDate'));
-            var actualEnd = new Date(item.get('ActualEndDate'));
-
             startBetween = Ext.Date.between( actualStart, stats.start, stats.end);
             endBetween = Ext.Date.between( actualEnd, stats.start, stats.end);
 
@@ -385,7 +444,7 @@ Ext.define('CustomApp', {
 
             else if ( startBetween && endBetween) {
                 aRecord.leftMargin = (Ext.Date.getElapsed( stats.start, actualStart)* stats.pixelsPerDay)/(24 * 3600 * 1000);
-                aRecord.width = (Ext.Date.getElapsed( actualStart, actualEnd)* stats.pixelsPerDay)/(24 * 3600 * 1000);
+                aRecord.width = (Ext.Date.getElapsed( actualStart, item.get('ActualEndDate')?actualEnd:today)* stats.pixelsPerDay)/(24 * 3600 * 1000);
             }
 
         }
@@ -433,7 +492,7 @@ Ext.define('CustomApp', {
             height: '10px',
             id: 'milestoneBox',
             style: {
-                backgroundColor: 'red'
+                backgroundColor: CustomApp.MileStoneBoxColour
             }
         });
 
