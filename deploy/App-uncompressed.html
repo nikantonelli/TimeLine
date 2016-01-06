@@ -22,7 +22,7 @@
         DaysPerMonth: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
         TreeBoxWidth: 200,
         StandardBarHeight: 30,
-        MileStoneBoxColour: 'red'
+        MileStoneBoxColour: Rally.util.Colors.cyan
     },
 
     items: [
@@ -87,6 +87,24 @@
                 fieldLabel: 'Use story points for percentages:',
                 stateful: true,
                 stateId: 'percent-' + Ext.id(),
+                labelAlign: 'right',
+                labelWidth: 200
+
+            },{
+                xtype: 'rallycheckboxfield',
+                name: 'useMileStoneFilter',
+                fieldLabel: 'Enable Milestone Filter:',
+                stateful: true,
+                stateId: 'mls-' + Ext.id(),
+                labelAlign: 'right',
+                labelWidth: 200
+
+            },{
+                xtype: 'rallycheckboxfield',
+                name: 'useReleaseFilter',
+                fieldLabel: 'Enable Release Filter:',
+                stateful: true,
+                stateId: 'rls-' + Ext.id(),
                 labelAlign: 'right',
                 labelWidth: 200
 
@@ -167,10 +185,23 @@
                         });
                     }
 
+                    //If the first release starts after the time period, we need a blank at the start...
+                    var srd = data[0].get('ReleaseStartDate');
+                    if ( srd > stats.start){
+                                var startBox = {
+                                    'width': (Ext.Date.getElapsed( srd, stats.start)* stats.pixelsPerDay)/(24 * 3600 * 1000),
+                                    'start': stats.start,
+                                    'leftMargin': 0,
+                                    'end': srd,
+                                    'colour': CustomApp.ToDoColour,
+                                    'title': ''
+                                };
+                                boxes.push(startBox);
+                    }
                     _.each(data, function(release) {
 
                         var thisStart = Ext.Date.clearTime(release.get('ReleaseStartDate'));
-                        var thisEnd = Ext.Date.clearTime(Ext.Date.add(release.get('ReleaseDate'), Ext.Date.HOUR, 1)); //Takes you up to the end of the day
+                        var thisEnd = Ext.Date.clearTime(Ext.Date.add(release.get('ReleaseDate'), Ext.Date.DAY, 1)); //Takes you up to the end of the day
 
                         if ((lastBox = boxes[boxes.length-1])) {
                             //Check the date of the last one and if needed, add a spacer
@@ -374,7 +405,7 @@
                 afterrender: function() {
                     Ext.create('Rally.ui.tooltip.ToolTip', {
                         target : this.getEl(),
-                        html: 'Today: ' + Ext.Date.format(new Date(), 'D M Y')
+                        html: 'Today: ' + Ext.Date.format(new Date(), 'D, d M Y')
                     });
                 }
             }
