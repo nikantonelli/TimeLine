@@ -112,6 +112,31 @@ Ext.define('CustomApp', {
                 labelAlign: 'right',
                 labelWidth: 200
 
+            },{
+                xtype: 'textarea',
+                fieldLabel: 'Query',
+                name: 'query',
+                anchor: '100%',
+                cls: 'query-field',
+                margin: '0 70 0 0',
+                plugins: [{
+                        ptype: 'rallyhelpfield',
+                        helpId: 194
+                    },
+                    'rallyfieldvalidationui'
+                ],
+                validateOnBlur: false,
+                validateOnChange: false,
+                validator: function(value) {
+                    try {
+                        if (value) {
+                            Rally.data.wsapi.Filter.fromQueryString(value);
+                        }
+                        return true;
+                    } catch (e) {
+                        return e.message;
+                    }
+                }
             }
         ];
 
@@ -155,8 +180,8 @@ Ext.define('CustomApp', {
 
 
     _iterationRender: function() {
-//        if (!(this.getSetting('displayIterations')))
-//            return;
+        if (!(this.getSetting('displayIterations')))
+            return;
 
         var tipFields = [
             {
@@ -174,8 +199,8 @@ Ext.define('CustomApp', {
     },
 
     _releaseRender: function() {
-//        if (!(this.getSetting('displayReleases')))
-//            return;
+        if (!(this.getSetting('displayReleases')))
+            return;
 
         var tipFields = [
             {
@@ -340,24 +365,6 @@ Ext.define('CustomApp', {
         });
     },
 
-//    _createBar: function( record ) {
-//
-//        var margin = '0 0 0 ' + record.leftMargin;
-//
-//        var bar =  Ext.create('Rally.app.CustomTimeLineBar', {
-//            id: 'TimeLineBar-' + Ext.id(),
-//            margin: margin,
-//            html: record.title,
-//            width: record.width,
-//            height: record.height || CustomApp.StandardBarHeight,
-//            align: 'center'
-//        });
-//        bar.setStyle({'backgroundColor' : record.colour});
-//
-//        return bar;
-//    },
-//
-
     launch: function() {
 
         var app = this;
@@ -514,6 +521,14 @@ Ext.define('CustomApp', {
         var timeboxScope = app.getContext().getTimeboxScope();
         if(timeboxScope) {
             filters.push(timeboxScope.getQueryFilter());
+        }
+
+        //Now get the settings query box and apply those settings
+        var queryString = app.getSetting('query');
+        if (queryString) {
+            var filterObj = Rally.data.wsapi.Filter.fromQueryString(queryString);
+            filterObj.itemId = filterObj.toString();
+            filters.push(filterObj);
         }
 
         var itemStore = Ext.create('Rally.data.wsapi.Store', {
