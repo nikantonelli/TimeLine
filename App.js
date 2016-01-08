@@ -28,14 +28,10 @@ Ext.define('CustomApp', {
             items: [
                 {
                     xtype: 'container',
+                    id: 'headerBox',
                     flex: 1,
                     layout: 'hbox',
                     items: [
-                        {
-                            xtype: 'rallyportfolioitemtypecombobox',
-                            margin: 10,
-                            id: 'piType'
-                        },
                         {
                             xtype: 'rallydatefield',
                             margin: 10,
@@ -159,8 +155,6 @@ Ext.define('CustomApp', {
             width: '100%',
             margin: '0 0 10 0'
         });
-        tb.doLayout();
-
     },
 
     _destroyBars: function(boxTitle) {
@@ -247,7 +241,6 @@ Ext.define('CustomApp', {
                             html : title + ': ',
                             colour : CustomApp.HdrColour
                         });
-                        tb.doLayout();  //Force a render, so we have the correct count next time
                     }
 
                     //If the first release starts after the time period, we need a blank at the start...
@@ -458,11 +451,23 @@ Ext.define('CustomApp', {
 
         var pitype = Ext.getCmp('piType');
 
-        pitype.on('select', function() { app._redrawTimeLines(app, this.getRecord().get('TypePath')); });
-
-        if (pitype.rendered){
-            this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
+        if ( !(pitype)){
+            pitype = Ext.create('Rally.ui.combobox.PortfolioItemTypeComboBox',
+                        {
+                            margin: 10,
+                            id: 'piType',
+                            listeners: {
+                                ready: function() { app._redrawTimeLines(app, Ext.getCmp('piType').getRecord().get('TypePath')); },
+                                select: function() { app._redrawTimeLines(app, Ext.getCmp('piType').getRecord().get('TypePath')); }
+                            }
+                        });
         }
+
+        Ext.getCmp('headerBox').insert(0, pitype);
+
+//        if (pitype && pitype.getRecord()){
+//            this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
+//        }
 
     },
 
@@ -527,6 +532,8 @@ Ext.define('CustomApp', {
             },
             margin: '0 0 0 ' + (Ext.Date.getElapsed( stats.start, new Date())* stats.pixelsPerDay)/(24 * 3600 * 1000)
         });
+
+        todayLine.addCls('todayLine');
         msbox.add(todayLine);
     },
 
@@ -811,6 +818,7 @@ Ext.define('CustomApp', {
             }
         });
 
+        milestoneBox.addCls('mlbox');
         lineBox.add(milestoneBox);
     },
 
@@ -917,4 +925,3 @@ Ext.define('Rally.app.CustomTimeLineBar', {
         );
     }
 });
-
