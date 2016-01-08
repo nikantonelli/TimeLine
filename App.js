@@ -168,13 +168,25 @@ Ext.define('CustomApp', {
     },
 
     _renderTimeboxes: function() {
-        this._iterationRender();
+        this._iterationRender(); //Do it in this order because of the container arrangement
         this._releaseRender();
     },
 
     _iterationRender: function() {
         if (!(this.getSetting('displayIterations')))
             return;
+
+        var title = 'Sprint';
+
+        var tb = Ext.getCmp('treeBox');
+        var titleBox = Ext.create( 'Rally.app.CustomTimeLineBar',
+        {
+            width: '100%',
+            html : title + ': ',
+            colour : CustomApp.HdrColour
+        });
+
+        tb.insert(0, titleBox);
 
         var tipFields = [
             {
@@ -188,12 +200,24 @@ Ext.define('CustomApp', {
 
         ];
 
-        this._timeboxRender('iteration', 'StartDate', 'EndDate', 'Sprint', tipFields);
+        this._timeboxRender('iteration', 'StartDate', 'EndDate', title, tipFields);
     },
 
     _releaseRender: function() {
-        if (!(this.getSetting('displayReleases')))
+        if (!(this.getSetting('displayReleases'))) 
             return;
+
+        var title = 'Program Increment';
+
+        var tb = Ext.getCmp('treeBox');
+        var titleBox = Ext.create( 'Rally.app.CustomTimeLineBar',
+        {
+            width: '100%',
+            html : title + ': ',
+            colour : CustomApp.HdrColour
+        });
+
+        tb.insert(0, titleBox);
 
         var tipFields = [
             {
@@ -206,7 +230,7 @@ Ext.define('CustomApp', {
             }
 
         ];
-        this._timeboxRender('release', 'ReleaseStartDate', 'ReleaseDate', 'Program Increment', tipFields);
+        this._timeboxRender('release', 'ReleaseStartDate', 'ReleaseDate', title, tipFields);
     },
 
     _timeboxRender: function(model, startdatefield, enddatefield, title, tooltipfields) {
@@ -232,16 +256,8 @@ Ext.define('CustomApp', {
                     var timeBox = Ext.getCmp(model + 'Box');
                     var boxes = [];
 
-                    if (data.length > 0){
-                        var tb = Ext.getCmp('treeBox');
-                        var pos =
-                        tb.insert(0, {
-                            xtype: 'timeLineBar',
-                            width: '100%',
-                            html : title + ': ',
-                            colour : CustomApp.HdrColour
-                        });
-                    }
+
+
 
                     //If the first release starts after the time period, we need a blank at the start...
                     var srd = data[0].get(startdatefield);
@@ -457,7 +473,6 @@ Ext.define('CustomApp', {
                             margin: 10,
                             id: 'piType',
                             listeners: {
-                                ready: function() { app._redrawTimeLines(app, Ext.getCmp('piType').getRecord().get('TypePath')); },
                                 select: function() { app._redrawTimeLines(app, Ext.getCmp('piType').getRecord().get('TypePath')); }
                             }
                         });
@@ -796,7 +811,7 @@ Ext.define('CustomApp', {
         stats.end =  new Date(Ext.Date.getLastDateOfMonth(Ext.getCmp('EndDate').value));
 
         stats.daysDuration = (stats.end - stats.start)/ (24 * 3600 * 1000);
-        stats.daysDuration = (stats.daysDuration > 31) ? stats.daysDuration : 31 ;   //One more than the biggest month to make sure we show correctly
+        stats.daysDuration = (stats.daysDuration > 31) ? stats.daysDuration : 31 ;
         var pixelsPerDay = (Ext.getBody().getWidth() - this.self.TreeBoxWidth) / (stats.daysDuration > 0 ? stats.daysDuration : 1) * this.zoomLevel;
         stats.pixelsPerDay = pixelsPerDay > 1 ? pixelsPerDay : 1;
 
