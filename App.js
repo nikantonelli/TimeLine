@@ -1,3 +1,7 @@
+//This app does not deal with TimeZone differences. If you see odd pixel misalignments, it is probably due to
+//you having different people in different timezones doing stuff in the same workspace.
+
+
 Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
@@ -92,10 +96,19 @@ Ext.define('CustomApp', {
 
             },{
                 xtype: 'rallycheckboxfield',
-                name: 'useReleaseFilter',
-                fieldLabel: 'Enable Release Filter:',
+                name: 'displayIterations',
+                fieldLabel: 'Display Iteration Header:',
                 stateful: true,
-                stateId: 'rls-' + Ext.id(),
+                stateId: 'dispIters-' + Ext.id(),
+                labelAlign: 'right',
+                labelWidth: 200
+
+            },{
+                xtype: 'rallycheckboxfield',
+                name: 'displayReleases',
+                fieldLabel: 'Display Release Header:',
+                stateful: true,
+                stateId: 'dispRels-' + Ext.id(),
                 labelAlign: 'right',
                 labelWidth: 200
 
@@ -135,20 +148,55 @@ Ext.define('CustomApp', {
         this._destroyBars('iterationBox');
         this._drawMonthBars();
         this._releaseRender();
+        this._iterationRender();
         this._destroyBars('lineBox');
         this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
     },
 
 
     _iterationRender: function() {
+//        if (!(this.getSetting('displayIterations')))
+//            return;
+
+        var tipFields = [
+            {
+                'text' : 'Iteration Start Date',
+                'field': 'StartDate'
+            },
+            {
+                'text' : 'Iteration End Date',
+                'field': 'EndDate'
+            }
+
+        ];
+
+        this._timeboxRender('iteration', 'StartDate', 'EndDate', 'Sprint', tipFields);
     },
 
     _releaseRender: function() {
+//        if (!(this.getSetting('displayReleases')))
+//            return;
+
+        var tipFields = [
+            {
+                'text' : 'Release Start Date',
+                'field': 'ReleaseStartDate'
+            },
+            {
+                'text' : 'Release End Date',
+                'field': 'ReleaseDate'
+            }
+
+        ];
+        this._timeboxRender('release', 'ReleaseStartDate', 'ReleaseDate', 'Program Increment', tipFields);
+    },
+
+    _timeboxRender: function(model, startdatefield, enddatefield, title, tooltipfields) {
 
         var app = this;
 
-        var relStore = Ext.create('Rally.data.wsapi.Store', {
-            model: 'release',
+        var dataStore = Ext.create('Rally.data.wsapi.Store', {
+            model: model,
             autoLoad: true,
             context: {
                 project: Rally.environment.getContext().getProjectRef(),
@@ -156,14 +204,14 @@ Ext.define('CustomApp', {
                 projectScopeDown: false
             },
             sorters: [{
-                property: 'ReleaseDate',
+                property: enddatefield,
                 direction: 'ASC'
             }],
             listeners: {
                 load: function(store, data, success) {
-                    //Create a list of items removing gaps between releases (shouldn't be any apart from the day of handover)
+                    //Create a list of items removing gaps between timboxes (shouldn't be any apart from the day of handover)
 
-                    var releaseBox = Ext.getCmp('releaseBox');
+                    var timeBox = Ext.getCmp(model + 'Box');
                     var boxes = [];
 
                     if (data.length > 0){
@@ -171,13 +219,13 @@ Ext.define('CustomApp', {
                         tb.insert(0, {
                             xtype: 'timeLineBar',
                             width: '100%',
-                            html : 'Program Increment:',
+                            html : title + ': ',
                             colour : CustomApp.HdrColour
                         });
                     }
 
                     //If the first release starts after the time period, we need a blank at the start...
-                    var srd = data[0].get('ReleaseStartDate');
+                    var srd = data[0].get(startdatefield);
                     if ( srd > stats.start){
                         var startBox = {
                             'width': (Ext.Date.getElapsed( srd, stats.start)* stats.pixelsPerDay)/(24 * 3600 * 1000),
@@ -189,10 +237,10 @@ Ext.define('CustomApp', {
                         };
                         boxes.push(startBox);
                     }
-                    _.each(data, function(release) {
+                    _.each(data, function(tb) {
 
-                        var thisStart = Ext.Date.clearTime(release.get('ReleaseStartDate'));
-                        var thisEnd = Ext.Date.clearTime(Ext.Date.add(release.get('ReleaseDate'), Ext.Date.DAY, 1)); //Takes you up to the end of the day
+                        var thisStart = Ext.Date.clearTime(tb.get(startdatefield));
+                        var thisEnd = Ext.Date.clearTime(Ext.Date.add(tb.get(enddatefield), Ext.Date.DAY, 1)); //Takes you up to the end of the day
 
                         if ((lastBox = boxes[boxes.length-1])) {
                             //Check the date of the last one and if needed, add a spacer
@@ -214,8 +262,24 @@ Ext.define('CustomApp', {
                             'start': thisStart,
                             'end': thisEnd,
                             'colour': CustomApp.HdrColour,
-                            'title': release.get('Name')
+                            'title': tb.get('Name')
                         };
+                        
+                        var html = '';
+
+                        _.each(tooltipfields, function(tip) {
+
+                            var typeOfField = Object.prototype.toString.call(tb.get(tip.field));
+
+                            //Reformat dates to a short format
+                            if ( typeOfField.search('Date')){
+                                html += '<p>' + tip.text + ': ' + Ext.Date.format(tb.get(tip.field), 'D d M Y') + '</p>';
+                            } else {
+                                html += '<p>' + tip.text + ': ' + tb.get(tip.field) + '</p>';
+                            }
+                        });
+                        box.html = html;
+
                         boxes.push(box);
                     });
 
@@ -258,7 +322,17 @@ Ext.define('CustomApp', {
                             theBar.addCls('mnthBox');
                             theBar.addCls('tltBox');
 
-                            releaseBox.add(theBar);
+                            if ( box.html) {
+                                theBar.on('afterrender',
+                                    function() {
+                                        Ext.create('Rally.ui.tooltip.ToolTip', {
+                                            target : this.getEl(),
+                                            html: box.html
+                                        });
+                                });
+                            }
+
+                            timeBox.add(theBar);
                         }
                     });
                 }
