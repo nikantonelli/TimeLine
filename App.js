@@ -5,6 +5,7 @@
 Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
+    id: 'MyApp',
 
     inheritableStatics: {
         ErrorColour: 'tomato',
@@ -87,15 +88,6 @@ Ext.define('CustomApp', {
 
             },{
                 xtype: 'rallycheckboxfield',
-                name: 'useMileStoneFilter',
-                fieldLabel: 'Enable Milestone Filter:',
-                stateful: true,
-                stateId: 'mls-' + Ext.id(),
-                labelAlign: 'right',
-                labelWidth: 200
-
-            },{
-                xtype: 'rallycheckboxfield',
                 name: 'displayIterations',
                 fieldLabel: 'Display Iteration Header:',
                 stateful: true,
@@ -109,6 +101,15 @@ Ext.define('CustomApp', {
                 fieldLabel: 'Display Release Header:',
                 stateful: true,
                 stateId: 'dispRels-' + Ext.id(),
+                labelAlign: 'right',
+                labelWidth: 200
+
+            },{
+                xtype: 'rallycheckboxfield',
+                name: 'updateForRelease',
+                fieldLabel: 'Release change updates Dates:',
+                stateful: true,
+                stateId: 'dduRels-' + Ext.id(),
                 labelAlign: 'right',
                 labelWidth: 200
 
@@ -158,6 +159,7 @@ Ext.define('CustomApp', {
             width: '100%',
             margin: '0 0 10 0'
         });
+        tb.doLayout();
 
     },
 
@@ -168,16 +170,13 @@ Ext.define('CustomApp', {
     },
 
      _resizeAllBars: function() {
-        this._destroyBars('monthBox');
-        this._destroyBars('releaseBox');
-        this._destroyBars('iterationBox');
-        this._drawMonthBars();
-        this._releaseRender();
-        this._iterationRender();
-        this._destroyBars('lineBox');
         this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
     },
 
+    _renderTimeboxes: function() {
+        this._iterationRender();
+        this._releaseRender();
+    },
 
     _iterationRender: function() {
         if (!(this.getSetting('displayIterations')))
@@ -241,12 +240,14 @@ Ext.define('CustomApp', {
 
                     if (data.length > 0){
                         var tb = Ext.getCmp('treeBox');
+                        var pos =
                         tb.insert(0, {
                             xtype: 'timeLineBar',
                             width: '100%',
                             html : title + ': ',
                             colour : CustomApp.HdrColour
                         });
+                        tb.doLayout();  //Force a render, so we have the correct count next time
                     }
 
                     //If the first release starts after the time period, we need a blank at the start...
@@ -379,19 +380,20 @@ Ext.define('CustomApp', {
             app.zoomLevel += 1;
             if (app.zoomLevel > 10) { app.zoomLevel = 10; }
             sl.setValue( app.zoomLevel * 10 );
-            app._resizeAllBars();
+            this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
         });
 
         lb.on('click', function() {
             app.zoomLevel -= 1;
             if (app.zoomLevel <= 0) { app.zoomLevel = 1; }
             sl.setValue( app.zoomLevel * 10 );
-            app._resizeAllBars();
+            this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
+
         });
 
         sl.on('changecomplete', function( slider, value, that) {
             app.zoomLevel = Math.trunc(value/10);
-            app._resizeAllBars();
+            this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
         });
 
         // Add handlers for date changes
@@ -466,6 +468,19 @@ Ext.define('CustomApp', {
 
     onTimeBoxScopeChange: function(newScope) {
         this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
+        if (this.getSetting('updateForRelease')){
+            //Give the user the option to change the start/edn dates to match
+
+            Ext.create('Rally.ui.dialog.ConfirmDialog', {
+                message: 'Update dates to match Release?',
+                confirmLabel: 'Ok',
+                listeners: {
+                    confirm: function(){
+                        debugger;
+                    }
+                }
+            });
+        }
     },
 
     // Modify the title box popup if the data is invalid
@@ -544,14 +559,16 @@ Ext.define('CustomApp', {
 
                     var timeLineBox = Ext.getCmp('lineBox');
                     var treeBox = Ext.getCmp('treeBox');
-                    app._destroyBars(timeLineBox.id);
-                    app._destroyBars(Ext.getCmp('releaseBox').id);
-                    app._destroyBars(Ext.getCmp('iterationBox').id);
-                    app._releaseRender();
-                    app._iterationRender();
+
+                    app._destroyBars('lineBox');
+                    app._destroyBars('releaseBox');
+                    app._destroyBars('iterationBox');
                     app._resetTreeBox(app);
 
+                    app._drawMonthBars();
+                    app._renderTimeboxes();
                     app._addMilestoneBox(app);
+
                     _.each(data, function(item) {
 
                         tlbox = app._createTimeLineForItem(app, item);
