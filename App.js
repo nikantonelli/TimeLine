@@ -17,7 +17,8 @@ Ext.define('CustomApp', {
         DataError:   'red',
         DaysPerMonth: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
         TreeBoxWidth: 200,
-        StandardBarHeight: 30,
+        TimeLineBarHeight: 30,
+        HeaderBoxHeight: 15,
         MileStoneBoxColour: Rally.util.Colors.cyan
     },
 
@@ -148,13 +149,15 @@ Ext.define('CustomApp', {
         var tb = Ext.getCmp('treeBox');
         app._destroyBars(tb.id);
 
-        tb.add( {
-            xtype: 'timeLineBar',
-            html: 'Calendar Month:',
-            colour: CustomApp.HdrColour,
-            width: '100%',
-            margin: '0 0 10 0'
-        });
+        tb.add( app._createBar({
+                title: 'Calendar Month:',
+                colour: CustomApp.HdrColour,
+                width: '100%',
+                margin: '0 0 10 0',
+                height: CustomApp.HeaderBoxHeight,
+                align: 'right'
+            })
+        );
     },
 
     _destroyBars: function(boxTitle) {
@@ -177,13 +180,14 @@ Ext.define('CustomApp', {
             return;
 
         var title = 'Sprint';
-
         var tb = Ext.getCmp('treeBox');
-        var titleBox = Ext.create( 'Rally.app.CustomTimeLineBar',
+        var titleBox = this._createBar(
         {
             width: '100%',
-            html : title + ': ',
-            colour : CustomApp.HdrColour
+            height: CustomApp.HeaderBoxHeight,
+            title: title,
+            colour : CustomApp.HdrColour,
+            align: 'right'
         });
 
         tb.insert(0, titleBox);
@@ -208,13 +212,14 @@ Ext.define('CustomApp', {
             return;
 
         var title = 'Program Increment';
-
         var tb = Ext.getCmp('treeBox');
-        var titleBox = Ext.create( 'Rally.app.CustomTimeLineBar',
+        var titleBox = this._createBar(
         {
             width: '100%',
-            html : title + ': ',
-            colour : CustomApp.HdrColour
+            height: CustomApp.HeaderBoxHeight,
+            title: title,
+            colour : CustomApp.HdrColour,
+            align: 'right'
         });
 
         tb.insert(0, titleBox);
@@ -268,7 +273,7 @@ Ext.define('CustomApp', {
                             'leftMargin': 0,
                             'end': srd,
                             'colour': CustomApp.ToDoColour,
-                            'title': ''
+                            'height': CustomApp.HeaderBoxHeight
                         };
                         boxes.push(startBox);
                     }
@@ -286,7 +291,7 @@ Ext.define('CustomApp', {
                                     'leftMargin': 0,
                                     'end': thisStart,
                                     'colour': CustomApp.ToDoColour,
-                                    'title': ''
+                                    'height': CustomApp.HeaderBoxHeight
                                 };
                                 boxes.push(spacerBox);
                             }
@@ -297,7 +302,8 @@ Ext.define('CustomApp', {
                             'start': thisStart,
                             'end': thisEnd,
                             'colour': CustomApp.HdrColour,
-                            'title': tb.get('Name')
+                            'title': tb.get('Name'),
+                            'height': CustomApp.HeaderBoxHeight
                         };
                         
                         var html = '';
@@ -327,7 +333,7 @@ Ext.define('CustomApp', {
                             'leftMargin': 0,
                             'end': stats.end,
                             'colour': CustomApp.ToDoColour,
-                            'title': ''
+                            'height': CustomApp.HeaderBoxHeight
                         };
                         boxes.push(endBox);
                     }
@@ -631,14 +637,13 @@ Ext.define('CustomApp', {
         });
 
         box.addCls('tlBox');
-        box.height = CustomApp.StandardBarHeight;
+        box.height = CustomApp.TimeLineBarHeight;
 
         // Create bar for PlannedStart and PlannedEnd. TODO: store these records for later manipulation
         var pRecord = {};
         pRecord.colour = CustomApp.HdrColour;
-        pRecord.title = '';
         pRecord.width = 0;
-        pRecord.height = Math.floor(CustomApp.StandardBarHeight/2);
+        pRecord.height = Math.floor(CustomApp.TimeLineBarHeight/2);
         pRecord.leftMargin = 0;
 
         var plannedStart = null;
@@ -689,10 +694,9 @@ Ext.define('CustomApp', {
             percentComplete = Math.floor(item.get('PercentDoneByStoryCount') * 100);
         }
         aRecord.colour = CustomApp.PassColour;
-        aRecord.height = Math.floor(CustomApp.StandardBarHeight/2);
+        aRecord.height = Math.floor(CustomApp.TimeLineBarHeight/2);
         aRecord.leftMargin = 0;
         aRecord.width = 0;
-        aRecord.title = '';
 
         var actualStart = new Date(item.get('ActualStartDate'));
         var actualEnd = new Date(item.get('ActualEndDate'));
@@ -853,6 +857,7 @@ Ext.define('CustomApp', {
             record.title = Ext.Date.format(lDate, 'M Y');
             record.colour = CustomApp.HdrColour;
             record.width = (this.self.DaysPerMonth[monthNum] * stats.pixelsPerDay);
+            record.height = CustomApp.HeaderBoxHeight;
 
             var mnth = this._createBar(record);
             mnth.addCls('mnthBox');
@@ -866,17 +871,18 @@ Ext.define('CustomApp', {
 
     _createBar: function( record ) {
 
-        var margin = '0 0 0 ' + record.leftMargin;
+        var margin = '0 0 0 ' + (record.leftMargin || 0);
+
+        margin = record.margin || margin;// If we override the margin, use that.
 
         var bar =  Ext.create('Rally.app.CustomTimeLineBar', {
             id: 'TimeLineBar-' + Ext.id(),
             margin: margin,
-            html: record.title,
+            html: record.title || '',
             width: record.width,
-            height: record.height || CustomApp.StandardBarHeight,
-            align: 'center'
+            height: record.height || CustomApp.TimeLineBarHeight
         });
-        bar.setStyle({'backgroundColor' : record.colour});
+        bar.setStyle({ 'backgroundColor' : record.colour, 'textAlign' : record.align || 'center'});
 
         return bar;
     },
@@ -902,11 +908,10 @@ Ext.define('Rally.app.CustomTimeLineBar', {
         autoSize: true,
         viewBox: false,
         draggable: false,
-        height: CustomApp.StandardBarHeight,
+        height: CustomApp.TimeLineBarHeight,
         style: {
             font: '12px Helvetica, sans-serif',
-            backgroundColor: CustomApp.HdrColour,
-            textAlign: 'center'
+            backgroundColor: CustomApp.HdrColour
         }
 
     },
