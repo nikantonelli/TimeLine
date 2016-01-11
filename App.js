@@ -8,11 +8,11 @@ Ext.define('CustomApp', {
     id: 'MyApp',
 
     inheritableStatics: {
-        ErrorColour: 'tomato',
-        WarnColour:  'orangered',
+        ErrorColour: Rally.util.Colors.red_med,
+        WarnColour:  Rally.util.Colors.orange_lt,
         PassColour:  'lightgreen',
         DoneColour:  'silver',
-        ToDoColour:  'lightblue',
+        ToDoColour:  Rally.util.Colors.cyan_very_lt,
         HdrColour:   'lightgray',
         DataError:   'red',
         DaysPerMonth: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
@@ -181,9 +181,9 @@ Ext.define('CustomApp', {
 
             //Reformat dates to a short format
             if ( typeOfField.search('Date')){
-                html += '<p>' + tip.text + ': ' + Ext.Date.format(record.get(tip.field), 'D d M Y') + '</p>';
+                html += '<div><strong>' + tip.text + ': </strong>' + Ext.Date.format(record.get(tip.field), 'D d M Y') + '</div>';
             } else {
-                html += '<p>' + tip.text + ': ' + record.get(tip.field) + '</p>';
+                html += '<div><strong>' + tip.text + ': </strong>' + record.get(tip.field) + '</div>';
             }
         });
 
@@ -497,6 +497,25 @@ Ext.define('CustomApp', {
     // Modify the title box popup if the data is invalid
     _dataCheckItem: function(app, box, item) {
 
+        var fail = false;
+        var html = '';
+
+        if (item.self.isPortfolioItem()) {
+            //Check for planned dates
+            if  (!(item.get('PlannedStartDate'))) {
+                fail = true;
+                html += '<div><strong> Missing Planned Start Date</strong></div>';
+            }
+            if (!(item.get('PlannedEndDate'))) {
+                fail = true;
+                html += '<div><strong> Missing Planned End Date</strong></div>';
+            }
+        }
+
+        if (fail) {
+            box.addCls('errorCorner');
+            box.tooltip = html;
+        }
     },
 
     _addToday: function(app) {

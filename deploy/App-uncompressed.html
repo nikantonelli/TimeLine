@@ -17,11 +17,11 @@ Ext.define('CustomApp', {
     id: 'MyApp',
 
     inheritableStatics: {
-        ErrorColour: 'tomato',
-        WarnColour:  'orangered',
+        ErrorColour: Rally.util.Colors.red_med,
+        WarnColour:  Rally.util.Colors.orange_lt,
         PassColour:  'lightgreen',
         DoneColour:  'silver',
-        ToDoColour:  'lightblue',
+        ToDoColour:  Rally.util.Colors.cyan_very_lt,
         HdrColour:   'lightgray',
         DataError:   'red',
         DaysPerMonth: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
@@ -190,9 +190,9 @@ Ext.define('CustomApp', {
 
             //Reformat dates to a short format
             if ( typeOfField.search('Date')){
-                html += '<p>' + tip.text + ': ' + Ext.Date.format(record.get(tip.field), 'D d M Y') + '</p>';
+                html += '<div><strong>' + tip.text + ': </strong>' + Ext.Date.format(record.get(tip.field), 'D d M Y') + '</div>';
             } else {
-                html += '<p>' + tip.text + ': ' + record.get(tip.field) + '</p>';
+                html += '<div><strong>' + tip.text + ': </strong>' + record.get(tip.field) + '</div>';
             }
         });
 
@@ -209,7 +209,7 @@ Ext.define('CustomApp', {
         if (!(this.getSetting('displayIterations')))
             return;
 
-        var title = 'Sprint';
+        var title = 'Sprint: ';
         var tb = Ext.getCmp('treeBox');
         var titleBox = this._createBar(
         {
@@ -241,7 +241,7 @@ Ext.define('CustomApp', {
         if (!(this.getSetting('displayReleases'))) 
             return;
 
-        var title = 'Program Increment';
+        var title = 'Program Increment: ';
         var tb = Ext.getCmp('treeBox');
         var titleBox = this._createBar(
         {
@@ -506,6 +506,25 @@ Ext.define('CustomApp', {
     // Modify the title box popup if the data is invalid
     _dataCheckItem: function(app, box, item) {
 
+        var fail = false;
+        var html = '';
+
+        if (item.self.isPortfolioItem()) {
+            //Check for planned dates
+            if  (!(item.get('PlannedStartDate'))) {
+                fail = true;
+                html += '<div><strong> Missing Planned Start Date</strong></div>';
+            }
+            if (!(item.get('PlannedEndDate'))) {
+                fail = true;
+                html += '<div><strong> Missing Planned End Date</strong></div>';
+            }
+        }
+
+        if (fail) {
+            box.addCls('errorCorner');
+            box.tooltip = html;
+        }
     },
 
     _addToday: function(app) {
@@ -985,6 +1004,11 @@ Ext.define('Rally.app.CustomTimeLineBar', {
 }
 .mlbox {
   z-index: 10;
+}
+.errorCorner {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAEDWlDQ1BJQ0MgUHJvZmlsZQAAOI2NVV1oHFUUPrtzZyMkzlNsNIV0qD8NJQ2TVjShtLp/3d02bpZJNtoi6GT27s6Yyc44M7v9oU9FUHwx6psUxL+3gCAo9Q/bPrQvlQol2tQgKD60+INQ6Ium65k7M5lpurHeZe58853vnnvuuWfvBei5qliWkRQBFpquLRcy4nOHj4g9K5CEh6AXBqFXUR0rXalMAjZPC3e1W99Dwntf2dXd/p+tt0YdFSBxH2Kz5qgLiI8B8KdVy3YBevqRHz/qWh72Yui3MUDEL3q44WPXw3M+fo1pZuQs4tOIBVVTaoiXEI/MxfhGDPsxsNZfoE1q66ro5aJim3XdoLFw72H+n23BaIXzbcOnz5mfPoTvYVz7KzUl5+FRxEuqkp9G/Ajia219thzg25abkRE/BpDc3pqvphHvRFys2weqvp+krbWKIX7nhDbzLOItiM8358pTwdirqpPFnMF2xLc1WvLyOwTAibpbmvHHcvttU57y5+XqNZrLe3lE/Pq8eUj2fXKfOe3pfOjzhJYtB/yll5SDFcSDiH+hRkH25+L+sdxKEAMZahrlSX8ukqMOWy/jXW2m6M9LDBc31B9LFuv6gVKg/0Szi3KAr1kGq1GMjU/aLbnq6/lRxc4XfJ98hTargX++DbMJBSiYMIe9Ck1YAxFkKEAG3xbYaKmDDgYyFK0UGYpfoWYXG+fAPPI6tJnNwb7ClP7IyF+D+bjOtCpkhz6CFrIa/I6sFtNl8auFXGMTP34sNwI/JhkgEtmDz14ySfaRcTIBInmKPE32kxyyE2Tv+thKbEVePDfW/byMM1Kmm0XdObS7oGD/MypMXFPXrCwOtoYjyyn7BV29/MZfsVzpLDdRtuIZnbpXzvlf+ev8MvYr/Gqk4H/kV/G3csdazLuyTMPsbFhzd1UabQbjFvDRmcWJxR3zcfHkVw9GfpbJmeev9F08WW8uDkaslwX6avlWGU6NRKz0g/SHtCy9J30o/ca9zX3Kfc19zn3BXQKRO8ud477hLnAfc1/G9mrzGlrfexZ5GLdn6ZZrrEohI2wVHhZywjbhUWEy8icMCGNCUdiBlq3r+xafL549HQ5jH+an+1y+LlYBifuxAvRN/lVVVOlwlCkdVm9NOL5BE4wkQ2SMlDZU97hX86EilU/lUmkQUztTE6mx1EEPh7OmdqBtAvv8HdWpbrJS6tJj3n0CWdM6busNzRV3S9KTYhqvNiqWmuroiKgYhshMjmhTh9ptWhsF7970j/SbMrsPE1suR5z7DMC+P/Hs+y7ijrQAlhyAgccjbhjPygfeBTjzhNqy28EdkUh8C+DU9+z2v/oyeH791OncxHOs5y2AtTc7nb/f73TWPkD/qwBnjX8BoJ98VVBg/m8AAAA5SURBVBgZY/zPwABEhAEjSAkxisEKiVEMV0hIMYpCfIoxFOJSjFUhNsU4FaIrxqsQXTGIjxeAwhkA/x0T9gDAanEAAAAASUVORK5CYII=');
+  background-repeat: no-repeat;
+  background-position: right top;
 }
 .todayIcon {
   background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAEDWlDQ1BJQ0MgUHJvZmlsZQAAOI2NVV1oHFUUPrtzZyMkzlNsNIV0qD8NJQ2TVjShtLp/3d02bpZJNtoi6GT27s6Yyc44M7v9oU9FUHwx6psUxL+3gCAo9Q/bPrQvlQol2tQgKD60+INQ6Ium65k7M5lpurHeZe58853vnnvuuWfvBei5qliWkRQBFpquLRcy4nOHj4g9K5CEh6AXBqFXUR0rXalMAjZPC3e1W99Dwntf2dXd/p+tt0YdFSBxH2Kz5qgLiI8B8KdVy3YBevqRHz/qWh72Yui3MUDEL3q44WPXw3M+fo1pZuQs4tOIBVVTaoiXEI/MxfhGDPsxsNZfoE1q66ro5aJim3XdoLFw72H+n23BaIXzbcOnz5mfPoTvYVz7KzUl5+FRxEuqkp9G/Ajia219thzg25abkRE/BpDc3pqvphHvRFys2weqvp+krbWKIX7nhDbzLOItiM8358pTwdirqpPFnMF2xLc1WvLyOwTAibpbmvHHcvttU57y5+XqNZrLe3lE/Pq8eUj2fXKfOe3pfOjzhJYtB/yll5SDFcSDiH+hRkH25+L+sdxKEAMZahrlSX8ukqMOWy/jXW2m6M9LDBc31B9LFuv6gVKg/0Szi3KAr1kGq1GMjU/aLbnq6/lRxc4XfJ98hTargX++DbMJBSiYMIe9Ck1YAxFkKEAG3xbYaKmDDgYyFK0UGYpfoWYXG+fAPPI6tJnNwb7ClP7IyF+D+bjOtCpkhz6CFrIa/I6sFtNl8auFXGMTP34sNwI/JhkgEtmDz14ySfaRcTIBInmKPE32kxyyE2Tv+thKbEVePDfW/byMM1Kmm0XdObS7oGD/MypMXFPXrCwOtoYjyyn7BV29/MZfsVzpLDdRtuIZnbpXzvlf+ev8MvYr/Gqk4H/kV/G3csdazLuyTMPsbFhzd1UabQbjFvDRmcWJxR3zcfHkVw9GfpbJmeev9F08WW8uDkaslwX6avlWGU6NRKz0g/SHtCy9J30o/ca9zX3Kfc19zn3BXQKRO8ud477hLnAfc1/G9mrzGlrfexZ5GLdn6ZZrrEohI2wVHhZywjbhUWEy8icMCGNCUdiBlq3r+xafL549HQ5jH+an+1y+LlYBifuxAvRN/lVVVOlwlCkdVm9NOL5BE4wkQ2SMlDZU97hX86EilU/lUmkQUztTE6mx1EEPh7OmdqBtAvv8HdWpbrJS6tJj3n0CWdM6busNzRV3S9KTYhqvNiqWmuroiKgYhshMjmhTh9ptWhsF7970j/SbMrsPE1suR5z7DMC+P/Hs+y7ijrQAlhyAgccjbhjPygfeBTjzhNqy28EdkUh8C+DU9+z2v/oyeH791OncxHOs5y2AtTc7nb/f73TWPkD/qwBnjX8BoJ98VVBg/m8AAAA6SURBVBgZY2RgYPgPxAQBE0EVUAWMUJqQqYwkmwgyGJepYFvJMhGbqTA/MBBtItTTKBTIrRjuJdpEANf+BgyegZ+UAAAAAElFTkSuQmCC');
