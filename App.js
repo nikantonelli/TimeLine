@@ -433,7 +433,7 @@ Ext.define('CustomApp', {
                         xtype: 'container',
                         id: 'treeBox',
                         width: this.self.TreeBoxWidth - 4, //Margin
-                        margin: '0 0 0 0', //Space for milestone box
+                        margin: '0 0 0 0', //Space for milestone box, if needed
                         autoScroll: false
                     },
                     {
@@ -855,8 +855,6 @@ Ext.define('CustomApp', {
 
         var monthBox = Ext.getCmp('monthBox');
 
-        this._calcTimeStats();
-
         monthNum = stats.start.getMonth();
         var lDate = stats.start;
         var lDays = 0;
@@ -897,59 +895,6 @@ Ext.define('CustomApp', {
 
     _headerRendered: function() {
 
-        //Now draw in some month bars
-        this._drawMonthBars();
-        this._resetTreeBox(this);
-    }
-});
-
-Ext.define('Rally.app.CustomTimeLineBar', {
-    extend: 'Ext.Component',
-    alias: 'widget.timeLineBar',
-
-    constructor: function(config) {
-        this.mergeConfig(config);       //Style is not merged, just over-written! Use setStyle instead.
-        this.callParent(arguments);
-    },
-
-    config: {
-        autoSize: true,
-        viewBox: false,
-        draggable: false,
-        height: CustomApp.TimeLineBarHeight,
-        style: {
-            font: '12px Helvetica, sans-serif',
-            backgroundColor: CustomApp.HdrColour
-        }
-
-    },
-
-//    renderTpl: this.getContentTpl(),
-//
-    getContentTpl: function() {
-        var me = this;
-
-        return Ext.create('Ext.XTemplate',
-            '<tpl if="this.canDrag()"><div class="icon drag"></div></tpl>',
-            '{[this.getActionsGear()]}',
-            '<div class="textContent ellipses">{[this.getFormattedId()]} {[this.getSeparator()]}{Name}</div>',
-            '<div class="rightSide">',
-            '</div>',
-            {
-                canDrag: function() {
-                    return me.getCanDrag();
-                },
-                getActionsGear: function() {
-                    return me._buildActionsGearHtml();
-                },
-                getFormattedId: function() {
-                    var record = me.getRecord();
-                    return record.getField('FormattedID') ? Rally.ui.renderer.RendererFactory.renderRecordField(record, 'FormattedID') : '';
-                },
-                getSeparator: function() {
-                    return this.getFormattedId() ? '- ' : '';
-                }
-            }
-        );
+        this._calcTimeStats();
     }
 });
