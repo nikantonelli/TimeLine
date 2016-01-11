@@ -19,33 +19,14 @@ Ext.define('Rally.app.CustomTimeLineBar', {
         }
 
     },
-
-//    renderTpl: this.getContentTpl(),
-//
-    getContentTpl: function() {
-        var me = this;
-
-        return Ext.create('Ext.XTemplate',
-            '<tpl if="this.canDrag()"><div class="icon drag"></div></tpl>',
-            '{[this.getActionsGear()]}',
-            '<div class="textContent ellipses">{[this.getFormattedId()]} {[this.getSeparator()]}{Name}</div>',
-            '<div class="rightSide">',
-            '</div>',
-            {
-                canDrag: function() {
-                    return me.getCanDrag();
-                },
-                getActionsGear: function() {
-                    return me._buildActionsGearHtml();
-                },
-                getFormattedId: function() {
-                    var record = me.getRecord();
-                    return record.getField('FormattedID') ? Rally.ui.renderer.RendererFactory.renderRecordField(record, 'FormattedID') : '';
-                },
-                getSeparator: function() {
-                    return this.getFormattedId() ? '- ' : '';
-                }
+    listeners: {
+        afterrender: function(arg1, arg2) {
+            if (this.tooltip) {
+                Ext.create('Rally.ui.tooltip.ToolTip', {
+                    target : this.getEl(),
+                    html: this.tooltip
+                });
             }
-        );
+        }
     }
 });

@@ -200,7 +200,7 @@ Ext.define('CustomApp', {
         if (!(this.getSetting('displayIterations')))
             return;
 
-        var title = 'Sprint';
+        var title = 'Sprint: ';
         var tb = Ext.getCmp('treeBox');
         var titleBox = this._createBar(
         {
@@ -232,7 +232,7 @@ Ext.define('CustomApp', {
         if (!(this.getSetting('displayReleases'))) 
             return;
 
-        var title = 'Program Increment';
+        var title = 'Program Increment: ';
         var tb = Ext.getCmp('treeBox');
         var titleBox = this._createBar(
         {
@@ -282,9 +282,6 @@ Ext.define('CustomApp', {
                     var timeBox = Ext.getCmp(model + 'Box');
                     var boxes = [];
 
-
-
-
                     //If the first release starts after the time period, we need a blank at the start...
                     var srd = data[0].get(startdatefield);
                     if ( srd > stats.start){
@@ -327,7 +324,7 @@ Ext.define('CustomApp', {
                             'height': CustomApp.HeaderBoxHeight,
                             'record': tb
                         };
-                        box.html = app._addTipInfo(box, tooltipfields);
+                        box.tooltip = app._addTipInfo(box, tooltipfields);
                         boxes.push(box);
                     });
 
@@ -369,17 +366,6 @@ Ext.define('CustomApp', {
                             var theBar = app._createBar(box);
                             theBar.addCls('mnthBox');
                             theBar.addCls('tltBox');
-
-                            if ( box.html) {
-                                theBar.on('afterrender',
-                                    function() {
-                                        Ext.create('Rally.ui.tooltip.ToolTip', {
-                                            target : this.getEl(),
-                                            html: box.html
-                                        });
-                                });
-                            }
-
                             timeBox.add(theBar);
                         }
                     });
@@ -465,11 +451,7 @@ Ext.define('CustomApp', {
                         flex: 1,
                         autoScroll: true
                     }
-                ],
-            listeners: {
-                render: this._headerRendered, //Once rendered we have the layout dimensions
-                scope: app
-            }
+                ]
         });
 
         this.add(timeLineBox);
@@ -492,10 +474,6 @@ Ext.define('CustomApp', {
         }
 
         Ext.getCmp('headerBox').insert(0, pitype);
-
-//        if (pitype && pitype.getRecord()){
-//            this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
-//        }
 
     },
 
@@ -598,6 +576,8 @@ Ext.define('CustomApp', {
                     app._destroyBars('monthBox');
                     app._resetTreeBox(app);
 
+                    app._calcTimeStats();
+
                     app._drawMonthBars();
                     app._renderTimeboxes();
                     app._addMilestoneBox(app);
@@ -690,6 +670,23 @@ Ext.define('CustomApp', {
         }
         var plannedBar = app._createBar(pRecord);
         plannedBar.addCls('planBar');
+
+        var tipFields = [
+            {
+                'text' : 'Planned Start Date',
+                'field': 'PlannedStartDate'
+            },
+            {
+                'text' : 'Planned End Date',
+                'field': 'PlannedEndDate'
+            }
+
+        ];
+
+
+        plannedBar.record = item;
+        plannedBar.tooltip = app._addTipInfo(plannedBar, tipFields);
+
         box.add(plannedBar);
 
         // Create bar for ActualStart and ActualEnd
@@ -799,16 +796,28 @@ Ext.define('CustomApp', {
         }
         var actualBar = app._createBar(aRecord);
         actualBar.addCls('actualBar');
+        actualBar.record = item;
+        var actualsFields = [
+            {
+                'text' : 'Actual Start Date',
+                'field': 'ActualStartDate'
+            },
+            {
+                'text' : 'Actual End Date',
+                'field': 'ActualEndDate'
+            }
+
+        ];
+
+
+        actualBar.record = item;
+        actualBar.tooltip = app._addTipInfo(actualBar, actualsFields);
         box.add(actualBar);
 
         return box;
     },
 
 //        Ext.util.Observable.capture( pitype, function(event) { console.log( 'pitype:', arguments);});
-
-
-//gb = Ext.getBody()
-//gb.dom.getElementsByClassName('rally-app')
 
     //Only call in the context of the rally-app to get the dimensions
     _calcTimeStats: function() {
@@ -889,12 +898,9 @@ Ext.define('CustomApp', {
             height: record.height || CustomApp.TimeLineBarHeight
         });
         bar.setStyle({ 'backgroundColor' : record.colour, 'textAlign' : record.align || 'center'});
+        bar.tooltip = record.tooltip;
+//        bar.record = record.record;
 
         return bar;
-    },
-
-    _headerRendered: function() {
-
-        this._calcTimeStats();
     }
 });
