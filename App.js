@@ -170,6 +170,27 @@ Ext.define('CustomApp', {
         this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
     },
 
+    _addTipInfo: function(box, tooltipfields) {
+
+        var record = box.record;
+
+        var html = '';
+        _.each(tooltipfields, function(tip) {
+
+            var typeOfField = Object.prototype.toString.call(record.get(tip.field));
+
+            //Reformat dates to a short format
+            if ( typeOfField.search('Date')){
+                html += '<p>' + tip.text + ': ' + Ext.Date.format(record.get(tip.field), 'D d M Y') + '</p>';
+            } else {
+                html += '<p>' + tip.text + ': ' + record.get(tip.field) + '</p>';
+            }
+        });
+
+        return ((html.length>0)? html: null);
+
+    },
+
     _renderTimeboxes: function() {
         this._iterationRender(); //Do it in this order because of the container arrangement
         this._releaseRender();
@@ -280,7 +301,7 @@ Ext.define('CustomApp', {
                     _.each(data, function(tb) {
 
                         var thisStart = Ext.Date.clearTime(tb.get(startdatefield));
-                        var thisEnd = Ext.Date.clearTime(Ext.Date.add(tb.get(enddatefield), Ext.Date.DAY, 1)); //Takes you up to the end of the day
+                        var thisEnd = Ext.Date.clearTime(Ext.Date.add(tb.get(enddatefield), Ext.Date.HOUR, 1)); //Takes you up to the end of the day
 
                         if ((lastBox = boxes[boxes.length-1])) {
                             //Check the date of the last one and if needed, add a spacer
@@ -303,24 +324,10 @@ Ext.define('CustomApp', {
                             'end': thisEnd,
                             'colour': CustomApp.HdrColour,
                             'title': tb.get('Name'),
-                            'height': CustomApp.HeaderBoxHeight
+                            'height': CustomApp.HeaderBoxHeight,
+                            'record': tb
                         };
-                        
-                        var html = '';
-
-                        _.each(tooltipfields, function(tip) {
-
-                            var typeOfField = Object.prototype.toString.call(tb.get(tip.field));
-
-                            //Reformat dates to a short format
-                            if ( typeOfField.search('Date')){
-                                html += '<p>' + tip.text + ': ' + Ext.Date.format(tb.get(tip.field), 'D d M Y') + '</p>';
-                            } else {
-                                html += '<p>' + tip.text + ': ' + tb.get(tip.field) + '</p>';
-                            }
-                        });
-                        box.html = html;
-
+                        box.html = app._addTipInfo(box, tooltipfields);
                         boxes.push(box);
                     });
 
@@ -344,7 +351,7 @@ Ext.define('CustomApp', {
                         if (!((box.end < stats.start) || (box.start > stats.end))) {    //Somewhere in view
                             if (box.start < stats.start) {
                                 box.start = stats.start;
-                                if (box.start > box.end) {
+                                if (box.start >= box.end) {
                                     box.width = 0;
                                 } else {
                                     box.width = (Ext.Date.getElapsed( box.end, box.start)* stats.pixelsPerDay)/(24 * 3600 * 1000);
@@ -352,7 +359,7 @@ Ext.define('CustomApp', {
                             }
                             if (box.end > stats.end) {
                                 box.end = stats.end;
-                                if ( box.end < box.start) {
+                                if ( box.end <= box.start) {
                                     box.width = 0;
                                 } else {
                                     box.width = (Ext.Date.getElapsed( box.end, box.start)* stats.pixelsPerDay)/(24 * 3600 * 1000);
@@ -585,17 +592,18 @@ Ext.define('CustomApp', {
             listeners: {
                 load: function(store, data, success) {
 
-                    var timeLineBox = Ext.getCmp('lineBox');
-                    var treeBox = Ext.getCmp('treeBox');
-
                     app._destroyBars('lineBox');
                     app._destroyBars('releaseBox');
                     app._destroyBars('iterationBox');
+                    app._destroyBars('monthBox');
                     app._resetTreeBox(app);
 
                     app._drawMonthBars();
                     app._renderTimeboxes();
                     app._addMilestoneBox(app);
+
+                    var timeLineBox = Ext.getCmp('lineBox');
+                    var treeBox = Ext.getCmp('treeBox');
 
                     _.each(data, function(item) {
 
