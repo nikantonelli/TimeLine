@@ -411,20 +411,20 @@ Ext.define('CustomApp', {
             app.zoomLevel += 1;
             if (app.zoomLevel > 10) { app.zoomLevel = 10; }
             sl.setValue( app.zoomLevel * 10 );
-            this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
+            app._redrawTimeLines(app, Ext.getCmp('piType').getRecord().get('TypePath'));
         });
 
         lb.on('click', function() {
             app.zoomLevel -= 1;
             if (app.zoomLevel <= 0) { app.zoomLevel = 1; }
             sl.setValue( app.zoomLevel * 10 );
-            this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
+            app._redrawTimeLines(app, Ext.getCmp('piType').getRecord().get('TypePath'));
 
         });
 
         sl.on('changecomplete', function( slider, value, that) {
             app.zoomLevel = Math.trunc(value/10);
-            this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
+            app._redrawTimeLines(app, Ext.getCmp('piType').getRecord().get('TypePath'));
         });
 
         // Add handlers for date changes
