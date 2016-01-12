@@ -9,8 +9,8 @@ Ext.define('CustomApp', {
 
     inheritableStatics: {
         ErrorColour: Rally.util.Colors.red_med,
-        WarnColour:  Rally.util.Colors.orange_lt,
-        PassColour:  'lightgreen',
+        WarnColour:  Rally.util.Colors.yellow,
+        PassColour:  Rally.util.Colors.lime,
         DoneColour:  'silver',
         ToDoColour:  Rally.util.Colors.cyan_very_lt,
         HdrColour:   'lightgray',
