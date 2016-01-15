@@ -16,6 +16,15 @@ Ext.define('CustomApp', {
     componentCls: 'app',
     id: 'MyApp',
 
+    paleColours: [
+        '#E4EECF',
+        '#E6E6E6',
+        '#BDD7EA',
+        '#FFEDBF',
+        '#6ab17d',
+        '#F1C5DD',
+        '#C3E9E3'
+    ],
     inheritableStatics: {
         ErrorColour: Rally.util.Colors.red_med,
         WarnColour:  Rally.util.Colors.yellow,
@@ -25,7 +34,8 @@ Ext.define('CustomApp', {
         HdrColour:   'lightgray',
         DataError:   'red',
         DaysPerMonth: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
-        TreeBoxWidth: 200,
+        ChildBoxWidth: 200,
+        ParentBoxWidth: 200,
         TimeLineBarHeight: 30,
         HeaderBoxHeight: 15,
         MileStoneBoxColour: Rally.util.Colors.cyan
@@ -86,7 +96,7 @@ Ext.define('CustomApp', {
         var returnVal = [{
                 xtype: 'rallycheckboxfield',
                 name: 'percentageType',
-                fieldLabel: 'Use story points for percentages:',
+                fieldLabel: 'Use story points for percentages',
                 stateful: true,
                 stateId: 'percent-' + Ext.id(),
                 labelAlign: 'right',
@@ -95,7 +105,7 @@ Ext.define('CustomApp', {
             },{
                 xtype: 'rallycheckboxfield',
                 name: 'displayIterations',
-                fieldLabel: 'Display Iteration Header:',
+                fieldLabel: 'Display Iteration Header',
                 stateful: true,
                 stateId: 'dispIters-' + Ext.id(),
                 labelAlign: 'right',
@@ -104,7 +114,7 @@ Ext.define('CustomApp', {
             },{
                 xtype: 'rallycheckboxfield',
                 name: 'displayReleases',
-                fieldLabel: 'Display Release Header:',
+                fieldLabel: 'Display Release Header',
                 stateful: true,
                 stateId: 'dispRels-' + Ext.id(),
                 labelAlign: 'right',
@@ -113,9 +123,18 @@ Ext.define('CustomApp', {
             },{
                 xtype: 'rallycheckboxfield',
                 name: 'updateForRelease',
-                fieldLabel: 'Release change updates Dates:',
+                fieldLabel: 'Auto update to Release',
                 stateful: true,
                 stateId: 'dduRels-' + Ext.id(),
+                labelAlign: 'right',
+                labelWidth: 200
+
+            },{
+                xtype: 'rallycheckboxfield',
+                name: 'groupByParent',
+                fieldLabel: 'Group Portfolio Items',
+                stateful: true,
+                stateId: 'groupByPs-' + Ext.id(),
                 labelAlign: 'right',
                 labelWidth: 200
 
@@ -156,6 +175,8 @@ Ext.define('CustomApp', {
 
     _resetTreeBox: function(app) {
         var tb = Ext.getCmp('treeBox');
+        var pb = Ext.getCmp('parentBox');
+
         app._destroyBars(tb.id);
 
         tb.add( app._createBar({
@@ -167,6 +188,19 @@ Ext.define('CustomApp', {
                 align: 'right'
             })
         );
+
+        //If we have a parent box defined, clean that out and reset
+        if (pb) {
+            app._destroyBars(pb.id);
+            pb.add( app._createBar({
+                    colour: CustomApp.HdrColour,
+                    width: '100%',
+                    margin: '0 0 10 0',
+                    height: CustomApp.HeaderBoxHeight,
+                    align: 'right'
+                })
+            );
+        }
     },
 
     _destroyBars: function(boxTitle) {
@@ -190,7 +224,7 @@ Ext.define('CustomApp', {
 
             //Reformat dates to a short format
             if ( typeOfField.search('Date')){
-                html += '<div><strong>' + tip.text + ': </strong>' + Ext.Date.format(record.get(tip.field), 'D d M Y') + '</div>';
+                html += '<div><strong>' + tip.text + ': </strong>' + Ext.Date.format(record.get(tip.field), 'D d M Y (T)') + '</div>';
             } else {
                 html += '<div><strong>' + tip.text + ': </strong>' + record.get(tip.field) + '</div>';
             }
@@ -221,6 +255,20 @@ Ext.define('CustomApp', {
         });
 
         tb.insert(0, titleBox);
+
+        var pb = Ext.getCmp('parentBox');
+        if (pb) {
+            var blankBox = this._createBar(
+            {
+                width: '100%',
+                height: CustomApp.HeaderBoxHeight,
+                title: '',
+                colour : CustomApp.HdrColour,
+                align: 'right'
+            });
+
+            pb.insert(0, blankBox);
+        }
 
         var tipFields = [
             {
@@ -253,6 +301,22 @@ Ext.define('CustomApp', {
         });
 
         tb.insert(0, titleBox);
+
+        var pb = Ext.getCmp('parentBox');
+
+        if (pb) {
+            var blankBox = this._createBar(
+            {
+                width: '100%',
+                height: CustomApp.HeaderBoxHeight,
+                title: '',
+                colour : CustomApp.HdrColour,
+                align: 'right'
+            });
+
+            pb.insert(0, blankBox);
+        }
+
 
         var tipFields = [
             {
@@ -420,14 +484,10 @@ Ext.define('CustomApp', {
 
         //Define a box to the left for the item tree and a box to the right that has the lines in
 
-
-        var timeLineBox = Ext.create('Ext.container.Container', {
-                layout: 'hbox',
-                items: [
-                    {
+        var hboxItems = [{
                         xtype: 'container',
                         id: 'treeBox',
-                        width: this.self.TreeBoxWidth - 4, //Margin
+                        width: this.self.ChildBoxWidth - 4, //Margin
                         margin: '0 0 0 0', //Space for milestone box, if needed
                         autoScroll: false
                     },
@@ -460,7 +520,20 @@ Ext.define('CustomApp', {
                         flex: 1,
                         autoScroll: true
                     }
-                ]
+                ];
+
+        if ( app.getSetting('groupByParent')){
+            hboxItems.splice(0,0, {
+                        xtype: 'container',
+                        id: 'parentBox',
+                        width: this.self.ParentBoxWidth - 4, //Margin
+                        margin: '0 0 0 0', //Space for milestone box, if needed
+                        autoScroll: false
+                    });
+        }
+        var timeLineBox = Ext.create('Ext.container.Container', {
+                layout: 'hbox',
+                items: hboxItems
         });
 
         this.add(timeLineBox);
@@ -486,20 +559,41 @@ Ext.define('CustomApp', {
 
     },
 
-    onTimeBoxScopeChange: function(newScope) {
-        this._redrawTimeLines(this, Ext.getCmp('piType').getRecord().get('TypePath'));
-        if (this.getSetting('updateForRelease')){
+    onTimeboxScopeChange: function(newScope) {
+
+        this.callParent(arguments);
+
+        var app = this;
+
+        //We only have releases on portfolio items
+        if (newScope.type != 'release')
+            return;
+
+        var release = newScope.getRecord();
+
+        //If we set the override to 'always' then skip this
+        if (!(this.getSetting('updateForRelease'))){
             //Give the user the option to change the start/edn dates to match
 
             Ext.create('Rally.ui.dialog.ConfirmDialog', {
-                message: 'Update dates to match Release?',
+                message: 'Update view dates to match Release?',
+                title: 'Timebox Scope Change Request',
                 confirmLabel: 'Ok',
                 listeners: {
                     confirm: function(){
-                        debugger;
+                        Ext.getCmp('StartDate').setValue(release.get('ReleaseStartDate'));
+                        Ext.getCmp('EndDate').setValue(release.get('ReleaseDate'));
+                        app._redrawTimeLines(app, Ext.getCmp('piType').getRecord().get('TypePath'));
+                    },
+                    cancel: function(){
+                        app._redrawTimeLines(app, Ext.getCmp('piType').getRecord().get('TypePath'));
                     }
                 }
             });
+        } else {
+            Ext.getCmp('StartDate').setValue(release.get('ReleaseStartDate'));
+            Ext.getCmp('EndDate').setValue(release.get('ReleaseDate'));
+            app._redrawTimeLines(app, Ext.getCmp('piType').getRecord().get('TypePath'));
         }
     },
 
@@ -587,20 +681,34 @@ Ext.define('CustomApp', {
             filters.push(filterObj);
         }
 
+        var sorter = null;
+
+        if ( app.getSetting('groupByParent')) {
+            sorter = {
+                property: 'Parent',
+                direction: 'ASC'
+            };
+
+        } else {
+            sorter = {
+                property: 'rank',
+                direction: 'ASC'
+            };
+        }
+
         var itemStore = Ext.create('Rally.data.wsapi.Store', {
             model: type,
             autoLoad: true,
             filters: filters,
-            sorters: [{
-                property: 'rank',
-                direction: 'ASC'
-            }],
+            sorters: [sorter],
             listeners: {
                 load: function(store, data, success) {
+
 
                     app._destroyBars('lineBox');
                     app._destroyBars('releaseBox');
                     app._destroyBars('iterationBox');
+                    app._destroyBars('monthBox');
                     app._destroyBars('monthBox');
                     app._resetTreeBox(app);
 
@@ -613,6 +721,11 @@ Ext.define('CustomApp', {
                     var timeLineBox = Ext.getCmp('lineBox');
                     var treeBox = Ext.getCmp('treeBox');
 
+                    //Layouts times seem to get exponentially bigger on many items, so suspend layouts while adding
+
+                    timeLineBox.suspendLayout = true;
+                    treeBox.suspendLayout = true;
+
                     _.each(data, function(item) {
 
                         tlbox = app._createTimeLineForItem(app, item);
@@ -623,6 +736,28 @@ Ext.define('CustomApp', {
                         treeBox.add(ttbox);
 
                     });
+
+                    var pb = Ext.getCmp('parentBox');
+
+                    if (pb) {
+                        var uniqs = _.uniq(_.map(data, function(record) { return record.get('Parent')._refObjectName;}));
+                        _.each (uniqs, function(parent) {
+
+                                var found = _.filter(data, function(record) {
+                                        return record.get('Parent')._refObjectName === parent;
+                                });
+                                var parentBox = {};
+                                parentBox.height = CustomApp.TimeLineBarHeight * found.length;
+                                parentBox.colour = app.paleColours[_.indexOf(uniqs,parent) % app.paleColours.length];
+                                parentBox.title = parent;
+                                pb.add(app._createBar(parentBox));
+                        });
+                    }
+                    timeLineBox.suspendLayout = false;
+                    treeBox.suspendLayout = false;
+                    timeLineBox.updateLayout();
+                    treeBox.updateLayout();
+
                     app._addToday(app);
                 }
             }
@@ -861,7 +996,14 @@ Ext.define('CustomApp', {
 
         stats.daysDuration = (stats.end - stats.start)/ (24 * 3600 * 1000);
         stats.daysDuration = (stats.daysDuration > 31) ? stats.daysDuration : 31 ;
-        var pixelsPerDay = (Ext.getBody().getWidth() - this.self.TreeBoxWidth) / (stats.daysDuration > 0 ? stats.daysDuration : 1) * this.zoomLevel;
+
+        //If we have the parent box visible
+        var itemsWidth = this.self.ChildBoxWidth;
+        if ( this.getSetting('groupByParent')) {
+            itemsWidth = (this.self.ChildBoxWidth + this.self.ParentBoxWidth);
+        }
+
+        var pixelsPerDay = (Ext.getBody().getWidth() - itemsWidth) / (stats.daysDuration > 0 ? stats.daysDuration : 1) * this.zoomLevel;
         stats.pixelsPerDay = pixelsPerDay > 1 ? pixelsPerDay : 1;
 
         return stats;
