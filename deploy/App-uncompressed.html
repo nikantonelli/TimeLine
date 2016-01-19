@@ -696,6 +696,14 @@ Ext.define('CustomApp', {
             };
         }
 
+        var visibleFilter = Ext.create('Rally.data.wsapi.Filter', {
+            property: 'Archived',
+            operator: '=',
+            value: false
+        });
+
+        filters.push(visibleFilter);
+
         var itemStore = Ext.create('Rally.data.wsapi.Store', {
             model: type,
             autoLoad: true,
