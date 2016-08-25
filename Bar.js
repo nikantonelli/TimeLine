@@ -12,10 +12,10 @@ Ext.define('Rally.app.CustomTimeLineBar', {
         autoSize: true,
         viewBox: false,
         draggable: false,
-        height: CustomApp.TimeLineBarHeight,
+        height: nantonelliTimeLineApp.TimeLineBarHeight,
         style: {
             font: '12px Helvetica, sans-serif',
-            backgroundColor: CustomApp.HdrColour
+            backgroundColor: nantonelliTimeLineApp.HdrColour
         }
 
     },

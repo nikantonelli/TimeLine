@@ -2,7 +2,7 @@
 //you having different people in different timezones doing stuff in the same workspace.
 
 
-Ext.define('CustomApp', {
+Ext.define('nantonelliTimeLineApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
     id: 'MyApp',
@@ -130,6 +130,15 @@ Ext.define('CustomApp', {
                 labelWidth: 200
 
             },{
+                xtype: 'rallycheckboxfield',
+                name: 'enableOutOfDateRange',
+                fieldLabel: 'Enable Out of Range Dates',
+                stateful: true,
+                stateId: 'enablr-' + Ext.id(),
+                labelAlign: 'right',
+                labelWidth: 200
+
+            },{
                 xtype: 'textarea',
                 fieldLabel: 'Query',
                 name: 'query',
@@ -172,10 +181,10 @@ Ext.define('CustomApp', {
 
         tb.add( app._createBar({
                 title: 'Calendar Month:',
-                colour: CustomApp.HdrColour,
+                colour: nantonelliTimeLineApp.HdrColour,
                 width: '100%',
                 margin: '0 0 10 0',
-                height: CustomApp.HeaderBoxHeight,
+                height: nantonelliTimeLineApp.HeaderBoxHeight,
                 align: 'right'
             })
         );
@@ -184,10 +193,10 @@ Ext.define('CustomApp', {
         if (pb) {
             app._destroyBars(pb.id);
             pb.add( app._createBar({
-                    colour: CustomApp.HdrColour,
+                    colour: nantonelliTimeLineApp.HdrColour,
                     width: '100%',
                     margin: '0 0 10 0',
-                    height: CustomApp.HeaderBoxHeight,
+                    height: nantonelliTimeLineApp.HeaderBoxHeight,
                     align: 'right'
                 })
             );
@@ -239,9 +248,9 @@ Ext.define('CustomApp', {
         var titleBox = this._createBar(
         {
             width: '100%',
-            height: CustomApp.HeaderBoxHeight,
+            height: nantonelliTimeLineApp.HeaderBoxHeight,
             title: title,
-            colour : CustomApp.HdrColour,
+            colour : nantonelliTimeLineApp.HdrColour,
             align: 'right'
         });
 
@@ -252,9 +261,9 @@ Ext.define('CustomApp', {
             var blankBox = this._createBar(
             {
                 width: '100%',
-                height: CustomApp.HeaderBoxHeight,
+                height: nantonelliTimeLineApp.HeaderBoxHeight,
                 title: '',
-                colour : CustomApp.HdrColour,
+                colour : nantonelliTimeLineApp.HdrColour,
                 align: 'right'
             });
 
@@ -285,9 +294,9 @@ Ext.define('CustomApp', {
         var titleBox = this._createBar(
         {
             width: '100%',
-            height: CustomApp.HeaderBoxHeight,
+            height: nantonelliTimeLineApp.HeaderBoxHeight,
             title: title,
-            colour : CustomApp.HdrColour,
+            colour : nantonelliTimeLineApp.HdrColour,
             align: 'right'
         });
 
@@ -299,9 +308,9 @@ Ext.define('CustomApp', {
             var blankBox = this._createBar(
             {
                 width: '100%',
-                height: CustomApp.HeaderBoxHeight,
+                height: nantonelliTimeLineApp.HeaderBoxHeight,
                 title: '',
-                colour : CustomApp.HdrColour,
+                colour : nantonelliTimeLineApp.HdrColour,
                 align: 'right'
             });
 
@@ -354,8 +363,8 @@ Ext.define('CustomApp', {
                             'start': stats.start,
                             'leftMargin': 0,
                             'end': srd,
-                            'colour': CustomApp.ToDoColour,
-                            'height': CustomApp.HeaderBoxHeight
+                            'colour': nantonelliTimeLineApp.ToDoColour,
+                            'height': nantonelliTimeLineApp.HeaderBoxHeight
                         };
                         boxes.push(startBox);
                     }
@@ -372,8 +381,8 @@ Ext.define('CustomApp', {
                                     'start': lastBox.end,
                                     'leftMargin': 0,
                                     'end': thisStart,
-                                    'colour': CustomApp.ToDoColour,
-                                    'height': CustomApp.HeaderBoxHeight
+                                    'colour': nantonelliTimeLineApp.ToDoColour,
+                                    'height': nantonelliTimeLineApp.HeaderBoxHeight
                                 };
                                 boxes.push(spacerBox);
                             }
@@ -383,9 +392,9 @@ Ext.define('CustomApp', {
                             'leftMargin': 0,
                             'start': thisStart,
                             'end': thisEnd,
-                            'colour': CustomApp.HdrColour,
+                            'colour': nantonelliTimeLineApp.HdrColour,
                             'title': tb.get('Name'),
-                            'height': CustomApp.HeaderBoxHeight,
+                            'height': nantonelliTimeLineApp.HeaderBoxHeight,
                             'record': tb
                         };
                         box.tooltip = app._addTipInfo(box, tooltipfields);
@@ -400,8 +409,8 @@ Ext.define('CustomApp', {
                             'start': erd,
                             'leftMargin': 0,
                             'end': stats.end,
-                            'colour': CustomApp.ToDoColour,
-                            'height': CustomApp.HeaderBoxHeight
+                            'colour': nantonelliTimeLineApp.ToDoColour,
+                            'height': nantonelliTimeLineApp.HeaderBoxHeight
                         };
                         boxes.push(endBox);
                     }
@@ -623,7 +632,7 @@ Ext.define('CustomApp', {
             height: '10px',
             width: '10px',
             style: {
-                backgroundColor: CustomApp.MileStoneBoxColour
+                backgroundColor: nantonelliTimeLineApp.MileStoneBoxColour
             },
             margin: margin,
             listeners: {
@@ -727,12 +736,43 @@ Ext.define('CustomApp', {
 
                     _.each(data, function(item) {
 
-                        tlbox = app._createTimeLineForItem(app, item);
-                        timeLineBox.add(tlbox);
+                        //Apply date filters for outside the date range
+                        var startPD = item.get('PlannedStartDate');
+                        var endPD = item.get('PlannedEndDate');
+                        var startAD = item.get('ActualStartDate');
+                        var endAD = item.get('ActualEndDate');
 
-                        ttbox = app._createTitleBoxForItem(app, item);
-                        app._dataCheckItem(app, ttbox, item);
-                        treeBox.add(ttbox);
+                        var gotSDate =
+                                ( startPD ?
+                                        (startAD ?
+                                            ( startPD < startAD) ?
+                                                startAD
+                                            : startPD
+                                        : startPD)
+                                : ( startAD ?
+                                        startAD
+                                    : null ) );
+
+                        var gotEDate =
+                                ( endPD ?
+                                    (endAD ?
+                                        ( endPD < endAD) ?
+                                            endAD
+                                        : endPD
+                                    : endPD)
+                                : ( endAD ?
+                                        endAD
+                                    : null ) ) ;
+
+
+                        if ((!app.getSetting('disableOutOfDateRange')) || (gotSDate && gotEDate )) {
+                            tlbox = app._createTimeLineForItem(app, item);
+                            timeLineBox.add(tlbox);
+
+                            ttbox = app._createTitleBoxForItem(app, item);
+                            app._dataCheckItem(app, ttbox, item);
+                            treeBox.add(ttbox);
+                        }
 
                     });
 
@@ -746,7 +786,7 @@ Ext.define('CustomApp', {
                                         return record.get('Parent')._refObjectName === parent;
                                 });
                                 var parentBox = {};
-                                parentBox.height = CustomApp.TimeLineBarHeight * found.length;
+                                parentBox.height = nantonelliTimeLineApp.TimeLineBarHeight * found.length;
                                 parentBox.colour = app.paleColours[_.indexOf(uniqs,parent) % app.paleColours.length];
                                 parentBox.title = parent;
                                 pb.add(app._createBar(parentBox));
@@ -765,7 +805,7 @@ Ext.define('CustomApp', {
 
     _createTitleBoxForItem: function(app, item) {
         var titleRec = {};
-        titleRec.colour = CustomApp.HdrColour;
+        titleRec.colour = nantonelliTimeLineApp.HdrColour;
         titleRec.leftMargin = 0;
         titleRec.width = '100%';
         titleRec.title = item.get('FormattedID') + ': ' + item.get('Name');
@@ -787,13 +827,13 @@ Ext.define('CustomApp', {
         });
 
         box.addCls('tlBox');
-        box.height = CustomApp.TimeLineBarHeight;
+        box.height = nantonelliTimeLineApp.TimeLineBarHeight;
 
         // Create bar for PlannedStart and PlannedEnd. TODO: store these records for later manipulation
         var pRecord = {};
-        pRecord.colour = CustomApp.HdrColour;
+        pRecord.colour = nantonelliTimeLineApp.HdrColour;
         pRecord.width = 0;
-        pRecord.height = Math.floor(CustomApp.TimeLineBarHeight/2);
+        pRecord.height = Math.floor(nantonelliTimeLineApp.TimeLineBarHeight/2);
         pRecord.leftMargin = 0;
 
         var plannedStart = null;
@@ -803,7 +843,7 @@ Ext.define('CustomApp', {
 
         //Are there incomplete data
         if (!(item.get('PlannedStartDate') && item.get('PlannedEndDate'))) {
-            pRecord.colour = CustomApp.DataError;
+            pRecord.colour = nantonelliTimeLineApp.DataError;
         } else {
             plannedStart = new Date(item.get('PlannedStartDate'));
             plannedEnd = new Date(item.get('PlannedEndDate'));
@@ -860,8 +900,8 @@ Ext.define('CustomApp', {
         } else {
             percentComplete = Math.floor(item.get('PercentDoneByStoryCount') * 100);
         }
-        aRecord.colour = CustomApp.PassColour;
-        aRecord.height = Math.floor(CustomApp.TimeLineBarHeight/2);
+        aRecord.colour = nantonelliTimeLineApp.PassColour;
+        aRecord.height = Math.floor(nantonelliTimeLineApp.TimeLineBarHeight/2);
         aRecord.leftMargin = 0;
         aRecord.width = 0;
 
@@ -871,7 +911,7 @@ Ext.define('CustomApp', {
         //Let's see what colour it should be
 
         if ((item.get('ActualStartDate') && item.get('ActualEndDate'))) {
-            aRecord.colour = CustomApp.DoneColour;
+            aRecord.colour = nantonelliTimeLineApp.DoneColour;
             aRecord.title = percentComplete + '%';
             aRecord.leftMargin = (Ext.Date.getElapsed( stats.start, actualStart)* stats.pixelsPerDay)/(24 * 3600 * 1000);
             aRecord.width = (Ext.Date.getElapsed( actualStart, actualEnd)* stats.pixelsPerDay)/(24 * 3600 * 1000);
@@ -916,19 +956,19 @@ Ext.define('CustomApp', {
             yellowThreshold =yellowSlope * (today - yellowXStart);
 
             if (percentComplete < redThreshold ) {
-                aRecord.colour = CustomApp.ErrorColour;
+                aRecord.colour = nantonelliTimeLineApp.ErrorColour;
             }
 
             if (percentComplete < yellowThreshold ) {
-                aRecord.colour = CustomApp.WarnColour;
+                aRecord.colour = nantonelliTimeLineApp.WarnColour;
             }
 
             if (today > colourEnd) {
                 if (percentComplete >= 100) {
-                    aRecord.colour = CustomApp.DoneColour;
+                    aRecord.colour = nantonelliTimeLineApp.DoneColour;
                 }
                 else {
-                    aRecord.colour = CustomApp.ErrorColour;
+                    aRecord.colour = nantonelliTimeLineApp.ErrorColour;
                 }
             }
 
@@ -1019,7 +1059,7 @@ Ext.define('CustomApp', {
             height: '10px',
             id: 'milestoneBox',
             style: {
-                backgroundColor: CustomApp.MileStoneBoxColour
+                backgroundColor: nantonelliTimeLineApp.MileStoneBoxColour
             }
         });
 
@@ -1039,9 +1079,9 @@ Ext.define('CustomApp', {
 
         while (lDate <= stats.end) {
             record.title = Ext.Date.format(lDate, 'M Y');
-            record.colour = CustomApp.HdrColour;
+            record.colour = nantonelliTimeLineApp.HdrColour;
             record.width = (this.self.DaysPerMonth[monthNum] * stats.pixelsPerDay);
-            record.height = CustomApp.HeaderBoxHeight;
+            record.height = nantonelliTimeLineApp.HeaderBoxHeight;
 
             var mnth = this._createBar(record);
             mnth.addCls('mnthBox');
@@ -1064,7 +1104,7 @@ Ext.define('CustomApp', {
             margin: margin,
             html: record.title || '',
             width: record.width,
-            height: record.height || CustomApp.TimeLineBarHeight
+            height: record.height || nantonelliTimeLineApp.TimeLineBarHeight
         });
         bar.setStyle({ 'backgroundColor' : record.colour, 'textAlign' : record.align || 'center'});
         bar.tooltip = record.tooltip;

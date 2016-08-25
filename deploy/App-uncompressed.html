@@ -3,7 +3,7 @@
 <head>
     <title>TimeLine</title>
 
-    <script type="text/javascript" src="/apps/2.0/sdk-debug.js"></script>
+    <script type="text/javascript" src="/apps/2.1/sdk-debug.js"></script>
 
     <script type="text/javascript">
         Rally.onReady(function () {
@@ -11,7 +11,7 @@
 //you having different people in different timezones doing stuff in the same workspace.
 
 
-Ext.define('CustomApp', {
+Ext.define('nantonelliTimeLineApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
     id: 'MyApp',
@@ -139,6 +139,15 @@ Ext.define('CustomApp', {
                 labelWidth: 200
 
             },{
+                xtype: 'rallycheckboxfield',
+                name: 'enableOutOfDateRange',
+                fieldLabel: 'Enable Out of Range Dates',
+                stateful: true,
+                stateId: 'enablr-' + Ext.id(),
+                labelAlign: 'right',
+                labelWidth: 200
+
+            },{
                 xtype: 'textarea',
                 fieldLabel: 'Query',
                 name: 'query',
@@ -181,10 +190,10 @@ Ext.define('CustomApp', {
 
         tb.add( app._createBar({
                 title: 'Calendar Month:',
-                colour: CustomApp.HdrColour,
+                colour: nantonelliTimeLineApp.HdrColour,
                 width: '100%',
                 margin: '0 0 10 0',
-                height: CustomApp.HeaderBoxHeight,
+                height: nantonelliTimeLineApp.HeaderBoxHeight,
                 align: 'right'
             })
         );
@@ -193,10 +202,10 @@ Ext.define('CustomApp', {
         if (pb) {
             app._destroyBars(pb.id);
             pb.add( app._createBar({
-                    colour: CustomApp.HdrColour,
+                    colour: nantonelliTimeLineApp.HdrColour,
                     width: '100%',
                     margin: '0 0 10 0',
-                    height: CustomApp.HeaderBoxHeight,
+                    height: nantonelliTimeLineApp.HeaderBoxHeight,
                     align: 'right'
                 })
             );
@@ -248,9 +257,9 @@ Ext.define('CustomApp', {
         var titleBox = this._createBar(
         {
             width: '100%',
-            height: CustomApp.HeaderBoxHeight,
+            height: nantonelliTimeLineApp.HeaderBoxHeight,
             title: title,
-            colour : CustomApp.HdrColour,
+            colour : nantonelliTimeLineApp.HdrColour,
             align: 'right'
         });
 
@@ -261,9 +270,9 @@ Ext.define('CustomApp', {
             var blankBox = this._createBar(
             {
                 width: '100%',
-                height: CustomApp.HeaderBoxHeight,
+                height: nantonelliTimeLineApp.HeaderBoxHeight,
                 title: '',
-                colour : CustomApp.HdrColour,
+                colour : nantonelliTimeLineApp.HdrColour,
                 align: 'right'
             });
 
@@ -294,9 +303,9 @@ Ext.define('CustomApp', {
         var titleBox = this._createBar(
         {
             width: '100%',
-            height: CustomApp.HeaderBoxHeight,
+            height: nantonelliTimeLineApp.HeaderBoxHeight,
             title: title,
-            colour : CustomApp.HdrColour,
+            colour : nantonelliTimeLineApp.HdrColour,
             align: 'right'
         });
 
@@ -308,9 +317,9 @@ Ext.define('CustomApp', {
             var blankBox = this._createBar(
             {
                 width: '100%',
-                height: CustomApp.HeaderBoxHeight,
+                height: nantonelliTimeLineApp.HeaderBoxHeight,
                 title: '',
-                colour : CustomApp.HdrColour,
+                colour : nantonelliTimeLineApp.HdrColour,
                 align: 'right'
             });
 
@@ -363,8 +372,8 @@ Ext.define('CustomApp', {
                             'start': stats.start,
                             'leftMargin': 0,
                             'end': srd,
-                            'colour': CustomApp.ToDoColour,
-                            'height': CustomApp.HeaderBoxHeight
+                            'colour': nantonelliTimeLineApp.ToDoColour,
+                            'height': nantonelliTimeLineApp.HeaderBoxHeight
                         };
                         boxes.push(startBox);
                     }
@@ -381,8 +390,8 @@ Ext.define('CustomApp', {
                                     'start': lastBox.end,
                                     'leftMargin': 0,
                                     'end': thisStart,
-                                    'colour': CustomApp.ToDoColour,
-                                    'height': CustomApp.HeaderBoxHeight
+                                    'colour': nantonelliTimeLineApp.ToDoColour,
+                                    'height': nantonelliTimeLineApp.HeaderBoxHeight
                                 };
                                 boxes.push(spacerBox);
                             }
@@ -392,9 +401,9 @@ Ext.define('CustomApp', {
                             'leftMargin': 0,
                             'start': thisStart,
                             'end': thisEnd,
-                            'colour': CustomApp.HdrColour,
+                            'colour': nantonelliTimeLineApp.HdrColour,
                             'title': tb.get('Name'),
-                            'height': CustomApp.HeaderBoxHeight,
+                            'height': nantonelliTimeLineApp.HeaderBoxHeight,
                             'record': tb
                         };
                         box.tooltip = app._addTipInfo(box, tooltipfields);
@@ -409,8 +418,8 @@ Ext.define('CustomApp', {
                             'start': erd,
                             'leftMargin': 0,
                             'end': stats.end,
-                            'colour': CustomApp.ToDoColour,
-                            'height': CustomApp.HeaderBoxHeight
+                            'colour': nantonelliTimeLineApp.ToDoColour,
+                            'height': nantonelliTimeLineApp.HeaderBoxHeight
                         };
                         boxes.push(endBox);
                     }
@@ -632,7 +641,7 @@ Ext.define('CustomApp', {
             height: '10px',
             width: '10px',
             style: {
-                backgroundColor: CustomApp.MileStoneBoxColour
+                backgroundColor: nantonelliTimeLineApp.MileStoneBoxColour
             },
             margin: margin,
             listeners: {
@@ -736,12 +745,43 @@ Ext.define('CustomApp', {
 
                     _.each(data, function(item) {
 
-                        tlbox = app._createTimeLineForItem(app, item);
-                        timeLineBox.add(tlbox);
+                        //Apply date filters for outside the date range
+                        var startPD = item.get('PlannedStartDate');
+                        var endPD = item.get('PlannedEndDate');
+                        var startAD = item.get('ActualStartDate');
+                        var endAD = item.get('ActualEndDate');
 
-                        ttbox = app._createTitleBoxForItem(app, item);
-                        app._dataCheckItem(app, ttbox, item);
-                        treeBox.add(ttbox);
+                        var gotSDate =
+                                ( startPD ?
+                                        (startAD ?
+                                            ( startPD < startAD) ?
+                                                startAD
+                                            : startPD
+                                        : startPD)
+                                : ( startAD ?
+                                        startAD
+                                    : null ) );
+
+                        var gotEDate =
+                                ( endPD ?
+                                    (endAD ?
+                                        ( endPD < endAD) ?
+                                            endAD
+                                        : endPD
+                                    : endPD)
+                                : ( endAD ?
+                                        endAD
+                                    : null ) ) ;
+
+
+                        if ((!app.getSetting('disableOutOfDateRange')) || (gotSDate && gotEDate )) {
+                            tlbox = app._createTimeLineForItem(app, item);
+                            timeLineBox.add(tlbox);
+
+                            ttbox = app._createTitleBoxForItem(app, item);
+                            app._dataCheckItem(app, ttbox, item);
+                            treeBox.add(ttbox);
+                        }
 
                     });
 
@@ -755,7 +795,7 @@ Ext.define('CustomApp', {
                                         return record.get('Parent')._refObjectName === parent;
                                 });
                                 var parentBox = {};
-                                parentBox.height = CustomApp.TimeLineBarHeight * found.length;
+                                parentBox.height = nantonelliTimeLineApp.TimeLineBarHeight * found.length;
                                 parentBox.colour = app.paleColours[_.indexOf(uniqs,parent) % app.paleColours.length];
                                 parentBox.title = parent;
                                 pb.add(app._createBar(parentBox));
@@ -774,7 +814,7 @@ Ext.define('CustomApp', {
 
     _createTitleBoxForItem: function(app, item) {
         var titleRec = {};
-        titleRec.colour = CustomApp.HdrColour;
+        titleRec.colour = nantonelliTimeLineApp.HdrColour;
         titleRec.leftMargin = 0;
         titleRec.width = '100%';
         titleRec.title = item.get('FormattedID') + ': ' + item.get('Name');
@@ -796,13 +836,13 @@ Ext.define('CustomApp', {
         });
 
         box.addCls('tlBox');
-        box.height = CustomApp.TimeLineBarHeight;
+        box.height = nantonelliTimeLineApp.TimeLineBarHeight;
 
         // Create bar for PlannedStart and PlannedEnd. TODO: store these records for later manipulation
         var pRecord = {};
-        pRecord.colour = CustomApp.HdrColour;
+        pRecord.colour = nantonelliTimeLineApp.HdrColour;
         pRecord.width = 0;
-        pRecord.height = Math.floor(CustomApp.TimeLineBarHeight/2);
+        pRecord.height = Math.floor(nantonelliTimeLineApp.TimeLineBarHeight/2);
         pRecord.leftMargin = 0;
 
         var plannedStart = null;
@@ -812,7 +852,7 @@ Ext.define('CustomApp', {
 
         //Are there incomplete data
         if (!(item.get('PlannedStartDate') && item.get('PlannedEndDate'))) {
-            pRecord.colour = CustomApp.DataError;
+            pRecord.colour = nantonelliTimeLineApp.DataError;
         } else {
             plannedStart = new Date(item.get('PlannedStartDate'));
             plannedEnd = new Date(item.get('PlannedEndDate'));
@@ -869,8 +909,8 @@ Ext.define('CustomApp', {
         } else {
             percentComplete = Math.floor(item.get('PercentDoneByStoryCount') * 100);
         }
-        aRecord.colour = CustomApp.PassColour;
-        aRecord.height = Math.floor(CustomApp.TimeLineBarHeight/2);
+        aRecord.colour = nantonelliTimeLineApp.PassColour;
+        aRecord.height = Math.floor(nantonelliTimeLineApp.TimeLineBarHeight/2);
         aRecord.leftMargin = 0;
         aRecord.width = 0;
 
@@ -880,7 +920,7 @@ Ext.define('CustomApp', {
         //Let's see what colour it should be
 
         if ((item.get('ActualStartDate') && item.get('ActualEndDate'))) {
-            aRecord.colour = CustomApp.DoneColour;
+            aRecord.colour = nantonelliTimeLineApp.DoneColour;
             aRecord.title = percentComplete + '%';
             aRecord.leftMargin = (Ext.Date.getElapsed( stats.start, actualStart)* stats.pixelsPerDay)/(24 * 3600 * 1000);
             aRecord.width = (Ext.Date.getElapsed( actualStart, actualEnd)* stats.pixelsPerDay)/(24 * 3600 * 1000);
@@ -925,19 +965,19 @@ Ext.define('CustomApp', {
             yellowThreshold =yellowSlope * (today - yellowXStart);
 
             if (percentComplete < redThreshold ) {
-                aRecord.colour = CustomApp.ErrorColour;
+                aRecord.colour = nantonelliTimeLineApp.ErrorColour;
             }
 
             if (percentComplete < yellowThreshold ) {
-                aRecord.colour = CustomApp.WarnColour;
+                aRecord.colour = nantonelliTimeLineApp.WarnColour;
             }
 
             if (today > colourEnd) {
                 if (percentComplete >= 100) {
-                    aRecord.colour = CustomApp.DoneColour;
+                    aRecord.colour = nantonelliTimeLineApp.DoneColour;
                 }
                 else {
-                    aRecord.colour = CustomApp.ErrorColour;
+                    aRecord.colour = nantonelliTimeLineApp.ErrorColour;
                 }
             }
 
@@ -1028,7 +1068,7 @@ Ext.define('CustomApp', {
             height: '10px',
             id: 'milestoneBox',
             style: {
-                backgroundColor: CustomApp.MileStoneBoxColour
+                backgroundColor: nantonelliTimeLineApp.MileStoneBoxColour
             }
         });
 
@@ -1048,9 +1088,9 @@ Ext.define('CustomApp', {
 
         while (lDate <= stats.end) {
             record.title = Ext.Date.format(lDate, 'M Y');
-            record.colour = CustomApp.HdrColour;
+            record.colour = nantonelliTimeLineApp.HdrColour;
             record.width = (this.self.DaysPerMonth[monthNum] * stats.pixelsPerDay);
-            record.height = CustomApp.HeaderBoxHeight;
+            record.height = nantonelliTimeLineApp.HeaderBoxHeight;
 
             var mnth = this._createBar(record);
             mnth.addCls('mnthBox');
@@ -1073,7 +1113,7 @@ Ext.define('CustomApp', {
             margin: margin,
             html: record.title || '',
             width: record.width,
-            height: record.height || CustomApp.TimeLineBarHeight
+            height: record.height || nantonelliTimeLineApp.TimeLineBarHeight
         });
         bar.setStyle({ 'backgroundColor' : record.colour, 'textAlign' : record.align || 'center'});
         bar.tooltip = record.tooltip;
@@ -1097,10 +1137,10 @@ Ext.define('Rally.app.CustomTimeLineBar', {
         autoSize: true,
         viewBox: false,
         draggable: false,
-        height: CustomApp.TimeLineBarHeight,
+        height: nantonelliTimeLineApp.TimeLineBarHeight,
         style: {
             font: '12px Helvetica, sans-serif',
-            backgroundColor: CustomApp.HdrColour
+            backgroundColor: nantonelliTimeLineApp.HdrColour
         }
 
     },
@@ -1117,7 +1157,7 @@ Ext.define('Rally.app.CustomTimeLineBar', {
 });
 
 
-            Rally.launchApp('CustomApp', {
+            Rally.launchApp('nantonelliTimeLineApp', {
                 name:"TimeLine",
 	            parentRepos:""
             });
@@ -1132,19 +1172,21 @@ Ext.define('Rally.app.CustomTimeLineBar', {
   /* Add app styles here */
 }
 .tlBox {
-  border-bottom: 1px solid #bbbbbb;
+  border-bottom: 1px solid #00A9E0;
   height: 30px;
 }
 .planBar {
-  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAPCAYAAAACsSQRAAAEDWlDQ1BJQ0MgUHJvZmlsZQAAOI2NVV1oHFUUPrtzZyMkzlNsNIV0qD8NJQ2TVjShtLp/3d02bpZJNtoi6GT27s6Yyc44M7v9oU9FUHwx6psUxL+3gCAo9Q/bPrQvlQol2tQgKD60+INQ6Ium65k7M5lpurHeZe58853vnnvuuWfvBei5qliWkRQBFpquLRcy4nOHj4g9K5CEh6AXBqFXUR0rXalMAjZPC3e1W99Dwntf2dXd/p+tt0YdFSBxH2Kz5qgLiI8B8KdVy3YBevqRHz/qWh72Yui3MUDEL3q44WPXw3M+fo1pZuQs4tOIBVVTaoiXEI/MxfhGDPsxsNZfoE1q66ro5aJim3XdoLFw72H+n23BaIXzbcOnz5mfPoTvYVz7KzUl5+FRxEuqkp9G/Ajia219thzg25abkRE/BpDc3pqvphHvRFys2weqvp+krbWKIX7nhDbzLOItiM8358pTwdirqpPFnMF2xLc1WvLyOwTAibpbmvHHcvttU57y5+XqNZrLe3lE/Pq8eUj2fXKfOe3pfOjzhJYtB/yll5SDFcSDiH+hRkH25+L+sdxKEAMZahrlSX8ukqMOWy/jXW2m6M9LDBc31B9LFuv6gVKg/0Szi3KAr1kGq1GMjU/aLbnq6/lRxc4XfJ98hTargX++DbMJBSiYMIe9Ck1YAxFkKEAG3xbYaKmDDgYyFK0UGYpfoWYXG+fAPPI6tJnNwb7ClP7IyF+D+bjOtCpkhz6CFrIa/I6sFtNl8auFXGMTP34sNwI/JhkgEtmDz14ySfaRcTIBInmKPE32kxyyE2Tv+thKbEVePDfW/byMM1Kmm0XdObS7oGD/MypMXFPXrCwOtoYjyyn7BV29/MZfsVzpLDdRtuIZnbpXzvlf+ev8MvYr/Gqk4H/kV/G3csdazLuyTMPsbFhzd1UabQbjFvDRmcWJxR3zcfHkVw9GfpbJmeev9F08WW8uDkaslwX6avlWGU6NRKz0g/SHtCy9J30o/ca9zX3Kfc19zn3BXQKRO8ud477hLnAfc1/G9mrzGlrfexZ5GLdn6ZZrrEohI2wVHhZywjbhUWEy8icMCGNCUdiBlq3r+xafL549HQ5jH+an+1y+LlYBifuxAvRN/lVVVOlwlCkdVm9NOL5BE4wkQ2SMlDZU97hX86EilU/lUmkQUztTE6mx1EEPh7OmdqBtAvv8HdWpbrJS6tJj3n0CWdM6busNzRV3S9KTYhqvNiqWmuroiKgYhshMjmhTh9ptWhsF7970j/SbMrsPE1suR5z7DMC+P/Hs+y7ijrQAlhyAgccjbhjPygfeBTjzhNqy28EdkUh8C+DU9+z2v/oyeH791OncxHOs5y2AtTc7nb/f73TWPkD/qwBnjX8BoJ98VVBg/m8AAABZSURBVDgRpczLDQAgCERBaMz+u0Ix0cQfLLgXwuENiUihxFo3x4metB4d68aD3h3QLoTcgBDyAmDEAiDEA1wEAUwEBZ5IBLgiUeBAMsCCZIGJ/AAd+QVaXyqZmUp5jZKhMgAAAABJRU5ErkJggg==');
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAPCAYAAAACsSQRAAAEDWlDQ1BJQ0MgUHJvZmlsZQAAOI2NVV1oHFUUPrtzZyMkzlNsNIV0qD8NJQ2TVjShtLp/3d02bpZJNtoi6GT27s6Yyc44M7v9oU9FUHwx6psUxL+3gCAo9Q/bPrQvlQol2tQgKD60+INQ6Ium65k7M5lpurHeZe58853vnnvuuWfvBei5qliWkRQBFpquLRcy4nOHj4g9K5CEh6AXBqFXUR0rXalMAjZPC3e1W99Dwntf2dXd/p+tt0YdFSBxH2Kz5qgLiI8B8KdVy3YBevqRHz/qWh72Yui3MUDEL3q44WPXw3M+fo1pZuQs4tOIBVVTaoiXEI/MxfhGDPsxsNZfoE1q66ro5aJim3XdoLFw72H+n23BaIXzbcOnz5mfPoTvYVz7KzUl5+FRxEuqkp9G/Ajia219thzg25abkRE/BpDc3pqvphHvRFys2weqvp+krbWKIX7nhDbzLOItiM8358pTwdirqpPFnMF2xLc1WvLyOwTAibpbmvHHcvttU57y5+XqNZrLe3lE/Pq8eUj2fXKfOe3pfOjzhJYtB/yll5SDFcSDiH+hRkH25+L+sdxKEAMZahrlSX8ukqMOWy/jXW2m6M9LDBc31B9LFuv6gVKg/0Szi3KAr1kGq1GMjU/aLbnq6/lRxc4XfJ98hTargX++DbMJBSiYMIe9Ck1YAxFkKEAG3xbYaKmDDgYyFK0UGYpfoWYXG+fAPPI6tJnNwb7ClP7IyF+D+bjOtCpkhz6CFrIa/I6sFtNl8auFXGMTP34sNwI/JhkgEtmDz14ySfaRcTIBInmKPE32kxyyE2Tv+thKbEVePDfW/byMM1Kmm0XdObS7oGD/MypMXFPXrCwOtoYjyyn7BV29/MZfsVzpLDdRtuIZnbpXzvlf+ev8MvYr/Gqk4H/kV/G3csdazLuyTMPsbFhzd1UabQbjFvDRmcWJxR3zcfHkVw9GfpbJmeev9F08WW8uDkaslwX6avlWGU6NRKz0g/SHtCy9J30o/ca9zX3Kfc19zn3BXQKRO8ud477hLnAfc1/G9mrzGlrfexZ5GLdn6ZZrrEohI2wVHhZywjbhUWEy8icMCGNCUdiBlq3r+xafL549HQ5jH+an+1y+LlYBifuxAvRN/lVVVOlwlCkdVm9NOL5BE4wkQ2SMlDZU97hX86EilU/lUmkQUztTE6mx1EEPh7OmdqBtAvv8HdWpbrJS6tJj3n0CWdM6busNzRV3S9KTYhqvNiqWmuroiKgYhshMjmhTh9ptWhsF7970j/SbMrsPE1suR5z7DMC+P/Hs+y7ijrQAlhyAgccjbhjPygfeBTjzhNqy28EdkUh8C+DU9+z2v/oyeH791OncxHOs5y2AtTc7nb/f73TWPkD/qwBnjX8BoJ98VVBg/m8AAAAjSURBVDgRY/wPBAwUAiYK9YO1Dx5DqOGbUTOGfwgwDq+8AwBhUggFKcv2KQAAAABJRU5ErkJggg==');
   background-repeat: repeat-x;
   margin-top: 5px;
-  z-index: 10;
+  z-index: 2;
 }
 .actualBar {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAPCAYAAAACsSQRAAAEDWlDQ1BJQ0MgUHJvZmlsZQAAOI2NVV1oHFUUPrtzZyMkzlNsNIV0qD8NJQ2TVjShtLp/3d02bpZJNtoi6GT27s6Yyc44M7v9oU9FUHwx6psUxL+3gCAo9Q/bPrQvlQol2tQgKD60+INQ6Ium65k7M5lpurHeZe58853vnnvuuWfvBei5qliWkRQBFpquLRcy4nOHj4g9K5CEh6AXBqFXUR0rXalMAjZPC3e1W99Dwntf2dXd/p+tt0YdFSBxH2Kz5qgLiI8B8KdVy3YBevqRHz/qWh72Yui3MUDEL3q44WPXw3M+fo1pZuQs4tOIBVVTaoiXEI/MxfhGDPsxsNZfoE1q66ro5aJim3XdoLFw72H+n23BaIXzbcOnz5mfPoTvYVz7KzUl5+FRxEuqkp9G/Ajia219thzg25abkRE/BpDc3pqvphHvRFys2weqvp+krbWKIX7nhDbzLOItiM8358pTwdirqpPFnMF2xLc1WvLyOwTAibpbmvHHcvttU57y5+XqNZrLe3lE/Pq8eUj2fXKfOe3pfOjzhJYtB/yll5SDFcSDiH+hRkH25+L+sdxKEAMZahrlSX8ukqMOWy/jXW2m6M9LDBc31B9LFuv6gVKg/0Szi3KAr1kGq1GMjU/aLbnq6/lRxc4XfJ98hTargX++DbMJBSiYMIe9Ck1YAxFkKEAG3xbYaKmDDgYyFK0UGYpfoWYXG+fAPPI6tJnNwb7ClP7IyF+D+bjOtCpkhz6CFrIa/I6sFtNl8auFXGMTP34sNwI/JhkgEtmDz14ySfaRcTIBInmKPE32kxyyE2Tv+thKbEVePDfW/byMM1Kmm0XdObS7oGD/MypMXFPXrCwOtoYjyyn7BV29/MZfsVzpLDdRtuIZnbpXzvlf+ev8MvYr/Gqk4H/kV/G3csdazLuyTMPsbFhzd1UabQbjFvDRmcWJxR3zcfHkVw9GfpbJmeev9F08WW8uDkaslwX6avlWGU6NRKz0g/SHtCy9J30o/ca9zX3Kfc19zn3BXQKRO8ud477hLnAfc1/G9mrzGlrfexZ5GLdn6ZZrrEohI2wVHhZywjbhUWEy8icMCGNCUdiBlq3r+xafL549HQ5jH+an+1y+LlYBifuxAvRN/lVVVOlwlCkdVm9NOL5BE4wkQ2SMlDZU97hX86EilU/lUmkQUztTE6mx1EEPh7OmdqBtAvv8HdWpbrJS6tJj3n0CWdM6busNzRV3S9KTYhqvNiqWmuroiKgYhshMjmhTh9ptWhsF7970j/SbMrsPE1suR5z7DMC+P/Hs+y7ijrQAlhyAgccjbhjPygfeBTjzhNqy28EdkUh8C+DU9+z2v/oyeH791OncxHOs5y2AtTc7nb/f73TWPkD/qwBnjX8BoJ98VVBg/m8AAAAjSURBVDgRY/wPBAwUAiYK9YO1Dx5DqOGbUTOGfwgwDq+8AwBhUggFKcv2KQAAAABJRU5ErkJggg==');
   height: 10px;
   padding-bottom: 5px;
-  z-index: 1;
+  z-index: 2;
+  border-bottom: 1px solid #00A9E0;
 }
 .tltBox {
   border-bottom: 1px solid #FFFFFF;
@@ -1168,7 +1210,7 @@ Ext.define('Rally.app.CustomTimeLineBar', {
   background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAEDWlDQ1BJQ0MgUHJvZmlsZQAAOI2NVV1oHFUUPrtzZyMkzlNsNIV0qD8NJQ2TVjShtLp/3d02bpZJNtoi6GT27s6Yyc44M7v9oU9FUHwx6psUxL+3gCAo9Q/bPrQvlQol2tQgKD60+INQ6Ium65k7M5lpurHeZe58853vnnvuuWfvBei5qliWkRQBFpquLRcy4nOHj4g9K5CEh6AXBqFXUR0rXalMAjZPC3e1W99Dwntf2dXd/p+tt0YdFSBxH2Kz5qgLiI8B8KdVy3YBevqRHz/qWh72Yui3MUDEL3q44WPXw3M+fo1pZuQs4tOIBVVTaoiXEI/MxfhGDPsxsNZfoE1q66ro5aJim3XdoLFw72H+n23BaIXzbcOnz5mfPoTvYVz7KzUl5+FRxEuqkp9G/Ajia219thzg25abkRE/BpDc3pqvphHvRFys2weqvp+krbWKIX7nhDbzLOItiM8358pTwdirqpPFnMF2xLc1WvLyOwTAibpbmvHHcvttU57y5+XqNZrLe3lE/Pq8eUj2fXKfOe3pfOjzhJYtB/yll5SDFcSDiH+hRkH25+L+sdxKEAMZahrlSX8ukqMOWy/jXW2m6M9LDBc31B9LFuv6gVKg/0Szi3KAr1kGq1GMjU/aLbnq6/lRxc4XfJ98hTargX++DbMJBSiYMIe9Ck1YAxFkKEAG3xbYaKmDDgYyFK0UGYpfoWYXG+fAPPI6tJnNwb7ClP7IyF+D+bjOtCpkhz6CFrIa/I6sFtNl8auFXGMTP34sNwI/JhkgEtmDz14ySfaRcTIBInmKPE32kxyyE2Tv+thKbEVePDfW/byMM1Kmm0XdObS7oGD/MypMXFPXrCwOtoYjyyn7BV29/MZfsVzpLDdRtuIZnbpXzvlf+ev8MvYr/Gqk4H/kV/G3csdazLuyTMPsbFhzd1UabQbjFvDRmcWJxR3zcfHkVw9GfpbJmeev9F08WW8uDkaslwX6avlWGU6NRKz0g/SHtCy9J30o/ca9zX3Kfc19zn3BXQKRO8ud477hLnAfc1/G9mrzGlrfexZ5GLdn6ZZrrEohI2wVHhZywjbhUWEy8icMCGNCUdiBlq3r+xafL549HQ5jH+an+1y+LlYBifuxAvRN/lVVVOlwlCkdVm9NOL5BE4wkQ2SMlDZU97hX86EilU/lUmkQUztTE6mx1EEPh7OmdqBtAvv8HdWpbrJS6tJj3n0CWdM6busNzRV3S9KTYhqvNiqWmuroiKgYhshMjmhTh9ptWhsF7970j/SbMrsPE1suR5z7DMC+P/Hs+y7ijrQAlhyAgccjbhjPygfeBTjzhNqy28EdkUh8C+DU9+z2v/oyeH791OncxHOs5y2AtTc7nb/f73TWPkD/qwBnjX8BoJ98VVBg/m8AAABLSURBVBgZjY7RCgAgCAOz///napEyR4h7ktsxtHUyGpnq2IvyJMJxgW+wELVAmVjnRzixiIUqV6xWvYtFB7zKLEQIXPCNzhQA/rIBthYoAU7mS/IAAAAASUVORK5CYII=');
 }
 .todayLine {
-  z-index: 1;
+  z-index: 10;
 }
 
     </style>

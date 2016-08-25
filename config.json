@@ -1,13 +1,13 @@
 {
-   "name": "TimeLine",
-   "className": "CustomApp",
-   "server": "https://rally1.rallydev.com",
-   "sdk": "2.0",
-   "javascript": [
-      "App.js",
-      "Bar.js"
-   ],
-   "css": [
-      "app.css"
-   ]
+    "name": "TimeLine",
+    "className": "nantonelliTimeLineApp",
+    "server": "https://rally1.rallydev.com",
+    "sdk": "2.1",
+    "javascript": [
+        "App.js",
+        "Bar.js"
+    ],
+    "css": [
+        "app.css"
+    ]
 }
