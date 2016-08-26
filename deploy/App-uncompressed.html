@@ -38,7 +38,7 @@ Ext.define('nantonelliTimeLineApp', {
         ParentBoxWidth: 200,
         TimeLineBarHeight: 30,
         HeaderBoxHeight: 15,
-        MileStoneBoxColour: Rally.util.Colors.cyan
+        MileStoneBoxColour: '#00A9E0' //Rally.util.Colors.cyan
     },
 
     items: [
@@ -498,7 +498,6 @@ Ext.define('nantonelliTimeLineApp', {
                         id: 'treeBox',
                         width: this.self.ChildBoxWidth - 4, //Margin
                         margin: '0 0 0 0', //Space for milestone box, if needed
-                        autoScroll: false
                     },
                     {
                         xtype: 'container',
@@ -527,7 +526,10 @@ Ext.define('nantonelliTimeLineApp', {
                             }
                         ],
                         flex: 1,
-                        autoScroll: true
+                        style: {
+                            overflowX: 'scroll',
+                            overflowY: 'visible'
+                        }
                     }
                 ];
 
@@ -537,7 +539,6 @@ Ext.define('nantonelliTimeLineApp', {
                         id: 'parentBox',
                         width: this.self.ParentBoxWidth - 4, //Margin
                         margin: '0 0 0 0', //Space for milestone box, if needed
-                        autoScroll: false
                     });
         }
         var timeLineBox = Ext.create('Ext.container.Container', {
@@ -546,6 +547,8 @@ Ext.define('nantonelliTimeLineApp', {
         });
 
         this.add(timeLineBox);
+
+//        timeLineBox.getEl().setStyle('overflow', 'scroll');
 
         //Whilst that is happening, fetch the roots (not tree!)
 
@@ -1139,7 +1142,7 @@ Ext.define('Rally.app.CustomTimeLineBar', {
         draggable: false,
         height: nantonelliTimeLineApp.TimeLineBarHeight,
         style: {
-            font: '12px Helvetica, sans-serif',
+            font: '9px Helvetica, sans-serif',
             backgroundColor: nantonelliTimeLineApp.HdrColour
         }
 

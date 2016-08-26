@@ -25,11 +25,11 @@ Ext.define('nantonelliTimeLineApp', {
         HdrColour:   'lightgray',
         DataError:   'red',
         DaysPerMonth: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
-        ChildBoxWidth: 200,
+        ChildBoxWidth: 300,
         ParentBoxWidth: 200,
         TimeLineBarHeight: 30,
         HeaderBoxHeight: 15,
-        MileStoneBoxColour: Rally.util.Colors.cyan
+        MileStoneBoxColour: '#00A9E0' //Rally.util.Colors.cyan
     },
 
     items: [
@@ -489,7 +489,6 @@ Ext.define('nantonelliTimeLineApp', {
                         id: 'treeBox',
                         width: this.self.ChildBoxWidth - 4, //Margin
                         margin: '0 0 0 0', //Space for milestone box, if needed
-                        autoScroll: false
                     },
                     {
                         xtype: 'container',
@@ -518,7 +517,10 @@ Ext.define('nantonelliTimeLineApp', {
                             }
                         ],
                         flex: 1,
-                        autoScroll: true
+                        style: {
+                            overflowX: 'scroll',
+                            overflowY: 'visible'
+                        }
                     }
                 ];
 
@@ -528,7 +530,6 @@ Ext.define('nantonelliTimeLineApp', {
                         id: 'parentBox',
                         width: this.self.ParentBoxWidth - 4, //Margin
                         margin: '0 0 0 0', //Space for milestone box, if needed
-                        autoScroll: false
                     });
         }
         var timeLineBox = Ext.create('Ext.container.Container', {

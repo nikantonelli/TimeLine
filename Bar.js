@@ -14,7 +14,7 @@ Ext.define('Rally.app.CustomTimeLineBar', {
         draggable: false,
         height: nantonelliTimeLineApp.TimeLineBarHeight,
         style: {
-            font: '12px Helvetica, sans-serif',
+            font: '9px Helvetica, sans-serif',
             backgroundColor: nantonelliTimeLineApp.HdrColour
         }
 
