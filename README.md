@@ -3,7 +3,7 @@ TimeLine
 
 ## Overview
 
-View a time line with arbitrary start dates and end dates, allow zoom in. Will show all items regardless of whether start/end dates are completed.
+View a time line for portfolio items with arbitrary start dates and end dates, allow zoom in. Will show all items regardless of whether start/end dates are completed (unlike standard app).
 
 Shows the Releases, Iterations and Calendar periods on top bar if requested. Light blue sections means that there are none defined for that time period.
 
