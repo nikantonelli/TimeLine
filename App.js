@@ -490,12 +490,12 @@ Ext.define('nantonelliTimeLineApp', {
                             margin: 10,
                             multiSelect: true,
                             displayField: 'StringValue',
-                            valueField: 'ValueIndex',
+                            valueField: 'StringValue',
                             allowBlank: false,
                             allowClear: false,
                             store: records[0].stores[0],
                             listeners: {
-                                change: function(a,b,c,d,e,f) {
+                                change: function(combobox, selected) {
                                     debugger;
                                 }
                             }
@@ -578,18 +578,18 @@ Ext.define('nantonelliTimeLineApp', {
 
     _milestoneColours: ['green', 'blue', 'brown', 'purple', 'olive', 'fuchsia', 'lime', 'maroon'],
 
-    _fetchMilestones: function(app) {
+    _fetchMilestones: function() {
         var deferred = Ext.create('Deft.Deferred');
 
-        if ( app._milestoneStore ) {
-            deferred.resolve(app._milestoneStore.getRecords());
+        if ( this._milestoneStore ) {
+            deferred.resolve(this._milestoneStore.getRecords());
             return deferred.promise;
         }
 
         var filters = Rally.data.wsapi.Filter.or([
             {
                 property: 'Projects.ObjectID',
-                value: app.getContext().getProject().ObjectID
+                value: this.getContext().getProject().ObjectID
             },
             {
                 property: 'Projects.ObjectID',
@@ -597,6 +597,7 @@ Ext.define('nantonelliTimeLineApp', {
             }
         ]);
 
+        var me = this;
         Ext.create('Rally.data.wsapi.Store',{
             model: 'Milestone',
             autoLoad: true,
@@ -605,7 +606,7 @@ Ext.define('nantonelliTimeLineApp', {
             listeners: {
                 load: function(store, results) {
                     if (store.getRecords().length) {
-                        app._milestoneStore = store;
+                        me._milestoneStore = store;
                         deferred.resolve(results);
                     }
                     else {
@@ -618,11 +619,10 @@ Ext.define('nantonelliTimeLineApp', {
 
     },
 
-    _applyMilestoneFilter: function(nantonelliTimeLineApp) {
+    _applyMilestoneFilter: function() {
         /** ~Get the current setting of the milestone types and
          * apply that to the _milestoneStore
         */
-       debugger;
        var mst = Ext.getCmp('milestoneTypes').value;    //An array of indexes
        var filters = [];
        _.each(mst, function(type) {
@@ -633,18 +633,19 @@ Ext.define('nantonelliTimeLineApp', {
                }
            );
        });
-       app._milestoneStore.setFilter(Rally.data.wsapi.Filter.or(filters));
-
+       this._milestoneStore.setFilter(Rally.data.wsapi.Filter.or(filters));
     },
 
-    _addMilestones: function(app) {
-        app._fetchMilestones(app).then({
+    _addMilestones: function() {
+        var me = this;
+        this._fetchMilestones().then({
             success: function(milestones) {
-                app._applyMilestoneFilter();
-                app._undrawMilestones();
-                app._drawMilestones();
-            }
-        })
+                me._applyMilestoneFilter();
+                me._undrawMilestones();
+                me._drawMilestones();
+            },
+            scope: me
+        });
     },
 
     _undrawMilestones: function() {
@@ -652,47 +653,67 @@ Ext.define('nantonelliTimeLineApp', {
     },
 
     _drawMilestones: function() {
+        var me = this;
+        _.each(this._milestoneStore.getRecords(), function(milestone) {
+            var typeCls = milestone.get('Projects').Count?'projectMls':'globalMls';
+            var mls = me._addLine(milestone.get('Name'), milestone.get('TargetDate'), typeCls);
+            mls.getEl().setStyle( { borderColor: (milestone.get('DisplayColor') || '#000000')});
+        });
+    },
+
+    _getMilestoneClass: function() {
 
     },
 
-    _addToday: function(app) {
+    _addLine: function(title, date, typeCls) {
         var msbox = Ext.getCmp('milestoneBox');
         var linebox = Ext.getCmp('lineBox');
         //Create a thing to add to month box
-        var margin = '0 0 0 ' + ((Ext.Date.getElapsed( stats.start, new Date())* stats.pixelsPerDay)/(24 * 3600 * 1000) - 4);
-        todayIcon = Ext.create('Ext.container.Container', {
+        var margin = (Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000) - 4;
+//        var margin = '0 0 0 ' + ((Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000) - 4);
+console.log('adding', title, date, typeCls);
+        
+        //Create a thing to add to lineBox
+        thisLine = Ext.create('Ext.container.Container', {
+            height: linebox.getHeight(),
+            width: '1px',
+            style: {
+                position: 'absolute',
+                top: 0,
+                left: Math.trunc(margin),
+            },
+
+            margin: '0 0 0 ' + (Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000)
+        });
+        thisLine.addCls(typeCls+'Line');
+        thisLine.render(msbox.getEl());
+        thisIcon = Ext.create('Ext.container.Container', {
             height: '10px',
             width: '10px',
+
+//            cls: 'floatingLine',
             style: {
-                backgroundColor: nantonelliTimeLineApp.MileStoneBoxColour
+                position: 'absolute',
+                top: 0,
+                left: Math.trunc(margin),
             },
-            margin: margin,
+//            margin: margin,
+            margin: '0 0 0 ' + (((Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000)) - 4),
+
             listeners: {
                 afterrender: function() {
                     Ext.create('Rally.ui.tooltip.ToolTip', {
                         target : this.getEl(),
-                        html: 'Today: ' + Ext.Date.format(new Date(), 'D, d M Y')
+                        html: title + ': ' + Ext.Date.format(date, 'D, d M Y')
                     });
                 }
             }
         });
-        todayIcon.addCls('todayIcon');
-        msbox.add(todayIcon);
-        //Create a thing to add to lineBox
-        todayLine = Ext.create('Ext.container.Container', {
-            height: linebox.getHeight(),
-            width: '1px',
-            border: 1,
-            style: {
-                borderColor: '#000000',
-                borderStyle: 'solid',
-                backgroundColor: '#000000'
-            },
-            margin: '0 0 0 ' + (Ext.Date.getElapsed( stats.start, new Date())* stats.pixelsPerDay)/(24 * 3600 * 1000)
-        });
-        todayLine.addCls('todayLine');
-        msbox.add(todayLine);
+        thisIcon.addCls(typeCls+'Icon');
+        thisIcon.render(msbox.getEl());
+        return thisLine;
     },
+
     _redrawTimeLines: function(app, type ) {
         var filters = [];
         var timeboxScope = app.getContext().getTimeboxScope();
@@ -731,6 +752,9 @@ Ext.define('nantonelliTimeLineApp', {
             sorters: [sorter],
             listeners: {
                 load: function(store, data, success) {
+                    if ( store.getRecords().length === 0) {
+                        Rally.ui.notify.Notifier.showWarning({message: 'No items of selected type found'});
+                    }
                     app._destroyBars('lineBox');
                     app._destroyBars('releaseBox');
                     app._destroyBars('iterationBox');
@@ -798,9 +822,10 @@ Ext.define('nantonelliTimeLineApp', {
                     treeBox.suspendLayout = false;
                     timeLineBox.updateLayout();
                     treeBox.updateLayout();
-                    app._addToday(app);
-                    app._addMilestones(app);
-                }
+                    app._addLine('Today', new Date(), 'today');
+                    app._addMilestones();
+                },
+                scope: app
             }
         });
     },

@@ -493,15 +493,21 @@ Ext.define('nantonelliTimeLineApp', {
                     success: function(records) {
                         app.down('#headerBox').add({
                             fieldLabel: 'Show Milestone Type',
+                            id: 'milestoneTypes',
                             labelWidth: 150,
                             xtype: 'rallycombobox',
                             margin: 10,
                             multiSelect: true,
                             displayField: 'StringValue',
-                            valueField: 'ValueIndex',
+                            valueField: 'StringValue',
                             allowBlank: false,
                             allowClear: false,
-                            store: records[0].stores[0]
+                            store: records[0].stores[0],
+                            listeners: {
+                                change: function(combobox, selected) {
+                                    debugger;
+                                }
+                            }
                         });
                     },
                     failure: function(e) {
@@ -526,6 +532,7 @@ Ext.define('nantonelliTimeLineApp', {
         }
         Ext.getCmp('headerBox').insert(0, pitype);
     },
+
     onTimeboxScopeChange: function(newScope) {
         this.callParent(arguments);
         var app = this;
@@ -577,44 +584,145 @@ Ext.define('nantonelliTimeLineApp', {
             box.tooltip = html;
         }
     },
-    _addToday: function(app) {
+
+    _milestoneColours: ['green', 'blue', 'brown', 'purple', 'olive', 'fuchsia', 'lime', 'maroon'],
+
+    _fetchMilestones: function() {
+        var deferred = Ext.create('Deft.Deferred');
+
+        if ( this._milestoneStore ) {
+            deferred.resolve(this._milestoneStore.getRecords());
+            return deferred.promise;
+        }
+
+        var filters = Rally.data.wsapi.Filter.or([
+            {
+                property: 'Projects.ObjectID',
+                value: this.getContext().getProject().ObjectID
+            },
+            {
+                property: 'Projects.ObjectID',
+                value: null
+            }
+        ]);
+
+        var me = this;
+        Ext.create('Rally.data.wsapi.Store',{
+            model: 'Milestone',
+            autoLoad: true,
+            fetch: true,
+            filters: filters,
+            listeners: {
+                load: function(store, results) {
+                    if (store.getRecords().length) {
+                        me._milestoneStore = store;
+                        deferred.resolve(results);
+                    }
+                    else {
+                        deferred.resolve(null);
+                    }
+                }
+            }
+        });
+        return deferred.promise;
+
+    },
+
+    _applyMilestoneFilter: function() {
+        /** ~Get the current setting of the milestone types and
+         * apply that to the _milestoneStore
+        */
+       var mst = Ext.getCmp('milestoneTypes').value;    //An array of indexes
+       var filters = [];
+       _.each(mst, function(type) {
+           filters.push( 
+               {
+                   property: 'ValueIndex',
+                   value: type
+               }
+           );
+       });
+       this._milestoneStore.setFilter(Rally.data.wsapi.Filter.or(filters));
+    },
+
+    _addMilestones: function() {
+        var me = this;
+        this._fetchMilestones().then({
+            success: function(milestones) {
+                me._applyMilestoneFilter();
+                me._undrawMilestones();
+                me._drawMilestones();
+            },
+            scope: me
+        });
+    },
+
+    _undrawMilestones: function() {
+
+    },
+
+    _drawMilestones: function() {
+        var me = this;
+        _.each(this._milestoneStore.getRecords(), function(milestone) {
+            var typeCls = milestone.get('Projects').Count?'projectMls':'globalMls';
+            var mls = me._addLine(milestone.get('Name'), milestone.get('TargetDate'), typeCls);
+            mls.getEl().setStyle( { borderColor: (milestone.get('DisplayColor') || '#000000')});
+        });
+    },
+
+    _getMilestoneClass: function() {
+
+    },
+
+    _addLine: function(title, date, typeCls) {
         var msbox = Ext.getCmp('milestoneBox');
         var linebox = Ext.getCmp('lineBox');
         //Create a thing to add to month box
-        var margin = '0 0 0 ' + ((Ext.Date.getElapsed( stats.start, new Date())* stats.pixelsPerDay)/(24 * 3600 * 1000) - 4);
-        todayIcon = Ext.create('Ext.container.Container', {
+        var margin = (Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000) - 4;
+//        var margin = '0 0 0 ' + ((Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000) - 4);
+console.log('adding', title, date, typeCls);
+        
+        //Create a thing to add to lineBox
+        thisLine = Ext.create('Ext.container.Container', {
+            height: linebox.getHeight(),
+            width: '1px',
+            style: {
+                position: 'absolute',
+                top: 0,
+                left: Math.trunc(margin),
+            },
+
+            margin: '0 0 0 ' + (Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000)
+        });
+        thisLine.addCls(typeCls+'Line');
+        thisLine.render(msbox.getEl());
+        thisIcon = Ext.create('Ext.container.Container', {
             height: '10px',
             width: '10px',
+
+//            cls: 'floatingLine',
             style: {
-                backgroundColor: nantonelliTimeLineApp.MileStoneBoxColour
+                position: 'absolute',
+                top: 0,
+                left: Math.trunc(margin),
             },
-            margin: margin,
+//            margin: margin,
+            margin: '0 0 0 ' + (((Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000)) - 4),
+
             listeners: {
                 afterrender: function() {
                     Ext.create('Rally.ui.tooltip.ToolTip', {
                         target : this.getEl(),
-                        html: 'Today: ' + Ext.Date.format(new Date(), 'D, d M Y')
+                        html: title + ': ' + Ext.Date.format(date, 'D, d M Y')
                     });
                 }
             }
         });
-        todayIcon.addCls('todayIcon');
-        msbox.add(todayIcon);
-        //Create a thing to add to lineBox
-        todayLine = Ext.create('Ext.container.Container', {
-            height: linebox.getHeight(),
-            width: '1px',
-            border: 1,
-            style: {
-                borderColor: '#000000',
-                borderStyle: 'solid',
-                backgroundColor: '#000000'
-            },
-            margin: '0 0 0 ' + (Ext.Date.getElapsed( stats.start, new Date())* stats.pixelsPerDay)/(24 * 3600 * 1000)
-        });
-        todayLine.addCls('todayLine');
-        msbox.add(todayLine);
+        thisIcon.addCls(typeCls+'Icon');
+        thisIcon.render(msbox.getEl());
+        return thisLine;
     },
+
     _redrawTimeLines: function(app, type ) {
         var filters = [];
         var timeboxScope = app.getContext().getTimeboxScope();
@@ -653,6 +761,9 @@ Ext.define('nantonelliTimeLineApp', {
             sorters: [sorter],
             listeners: {
                 load: function(store, data, success) {
+                    if ( store.getRecords().length === 0) {
+                        Rally.ui.notify.Notifier.showWarning({message: 'No items of selected type found'});
+                    }
                     app._destroyBars('lineBox');
                     app._destroyBars('releaseBox');
                     app._destroyBars('iterationBox');
@@ -720,8 +831,10 @@ Ext.define('nantonelliTimeLineApp', {
                     treeBox.suspendLayout = false;
                     timeLineBox.updateLayout();
                     treeBox.updateLayout();
-                    app._addToday(app);
-                }
+                    app._addLine('Today', new Date(), 'today');
+                    app._addMilestones();
+                },
+                scope: app
             }
         });
     },
@@ -1009,11 +1122,8 @@ Ext.define('Rally.app.CustomTimeLineBar', {
 
 
     <style type="text/css">
-        .app {
-  /* Add app styles here */
-}
-.tlBox {
-  border-bottom: 1px solid #00A9E0;
+        .tlBox {
+  border-bottom: 1px solid #FFA9E0;
   height: 30px;
 }
 .planBar {
@@ -1045,13 +1155,26 @@ Ext.define('Rally.app.CustomTimeLineBar', {
 }
 .todayIcon {
   background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAEDWlDQ1BJQ0MgUHJvZmlsZQAAOI2NVV1oHFUUPrtzZyMkzlNsNIV0qD8NJQ2TVjShtLp/3d02bpZJNtoi6GT27s6Yyc44M7v9oU9FUHwx6psUxL+3gCAo9Q/bPrQvlQol2tQgKD60+INQ6Ium65k7M5lpurHeZe58853vnnvuuWfvBei5qliWkRQBFpquLRcy4nOHj4g9K5CEh6AXBqFXUR0rXalMAjZPC3e1W99Dwntf2dXd/p+tt0YdFSBxH2Kz5qgLiI8B8KdVy3YBevqRHz/qWh72Yui3MUDEL3q44WPXw3M+fo1pZuQs4tOIBVVTaoiXEI/MxfhGDPsxsNZfoE1q66ro5aJim3XdoLFw72H+n23BaIXzbcOnz5mfPoTvYVz7KzUl5+FRxEuqkp9G/Ajia219thzg25abkRE/BpDc3pqvphHvRFys2weqvp+krbWKIX7nhDbzLOItiM8358pTwdirqpPFnMF2xLc1WvLyOwTAibpbmvHHcvttU57y5+XqNZrLe3lE/Pq8eUj2fXKfOe3pfOjzhJYtB/yll5SDFcSDiH+hRkH25+L+sdxKEAMZahrlSX8ukqMOWy/jXW2m6M9LDBc31B9LFuv6gVKg/0Szi3KAr1kGq1GMjU/aLbnq6/lRxc4XfJ98hTargX++DbMJBSiYMIe9Ck1YAxFkKEAG3xbYaKmDDgYyFK0UGYpfoWYXG+fAPPI6tJnNwb7ClP7IyF+D+bjOtCpkhz6CFrIa/I6sFtNl8auFXGMTP34sNwI/JhkgEtmDz14ySfaRcTIBInmKPE32kxyyE2Tv+thKbEVePDfW/byMM1Kmm0XdObS7oGD/MypMXFPXrCwOtoYjyyn7BV29/MZfsVzpLDdRtuIZnbpXzvlf+ev8MvYr/Gqk4H/kV/G3csdazLuyTMPsbFhzd1UabQbjFvDRmcWJxR3zcfHkVw9GfpbJmeev9F08WW8uDkaslwX6avlWGU6NRKz0g/SHtCy9J30o/ca9zX3Kfc19zn3BXQKRO8ud477hLnAfc1/G9mrzGlrfexZ5GLdn6ZZrrEohI2wVHhZywjbhUWEy8icMCGNCUdiBlq3r+xafL549HQ5jH+an+1y+LlYBifuxAvRN/lVVVOlwlCkdVm9NOL5BE4wkQ2SMlDZU97hX86EilU/lUmkQUztTE6mx1EEPh7OmdqBtAvv8HdWpbrJS6tJj3n0CWdM6busNzRV3S9KTYhqvNiqWmuroiKgYhshMjmhTh9ptWhsF7970j/SbMrsPE1suR5z7DMC+P/Hs+y7ijrQAlhyAgccjbhjPygfeBTjzhNqy28EdkUh8C+DU9+z2v/oyeH791OncxHOs5y2AtTc7nb/f73TWPkD/qwBnjX8BoJ98VVBg/m8AAAA6SURBVBgZY2RgYPgPxAQBE0EVUAWMUJqQqYwkmwgyGJepYFvJMhGbqTA/MBBtItTTKBTIrRjuJdpEANf+BgyegZ+UAAAAAElFTkSuQmCC');
-  z-index: 1;
-}
-.milestoneIcon {
-  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAEDWlDQ1BJQ0MgUHJvZmlsZQAAOI2NVV1oHFUUPrtzZyMkzlNsNIV0qD8NJQ2TVjShtLp/3d02bpZJNtoi6GT27s6Yyc44M7v9oU9FUHwx6psUxL+3gCAo9Q/bPrQvlQol2tQgKD60+INQ6Ium65k7M5lpurHeZe58853vnnvuuWfvBei5qliWkRQBFpquLRcy4nOHj4g9K5CEh6AXBqFXUR0rXalMAjZPC3e1W99Dwntf2dXd/p+tt0YdFSBxH2Kz5qgLiI8B8KdVy3YBevqRHz/qWh72Yui3MUDEL3q44WPXw3M+fo1pZuQs4tOIBVVTaoiXEI/MxfhGDPsxsNZfoE1q66ro5aJim3XdoLFw72H+n23BaIXzbcOnz5mfPoTvYVz7KzUl5+FRxEuqkp9G/Ajia219thzg25abkRE/BpDc3pqvphHvRFys2weqvp+krbWKIX7nhDbzLOItiM8358pTwdirqpPFnMF2xLc1WvLyOwTAibpbmvHHcvttU57y5+XqNZrLe3lE/Pq8eUj2fXKfOe3pfOjzhJYtB/yll5SDFcSDiH+hRkH25+L+sdxKEAMZahrlSX8ukqMOWy/jXW2m6M9LDBc31B9LFuv6gVKg/0Szi3KAr1kGq1GMjU/aLbnq6/lRxc4XfJ98hTargX++DbMJBSiYMIe9Ck1YAxFkKEAG3xbYaKmDDgYyFK0UGYpfoWYXG+fAPPI6tJnNwb7ClP7IyF+D+bjOtCpkhz6CFrIa/I6sFtNl8auFXGMTP34sNwI/JhkgEtmDz14ySfaRcTIBInmKPE32kxyyE2Tv+thKbEVePDfW/byMM1Kmm0XdObS7oGD/MypMXFPXrCwOtoYjyyn7BV29/MZfsVzpLDdRtuIZnbpXzvlf+ev8MvYr/Gqk4H/kV/G3csdazLuyTMPsbFhzd1UabQbjFvDRmcWJxR3zcfHkVw9GfpbJmeev9F08WW8uDkaslwX6avlWGU6NRKz0g/SHtCy9J30o/ca9zX3Kfc19zn3BXQKRO8ud477hLnAfc1/G9mrzGlrfexZ5GLdn6ZZrrEohI2wVHhZywjbhUWEy8icMCGNCUdiBlq3r+xafL549HQ5jH+an+1y+LlYBifuxAvRN/lVVVOlwlCkdVm9NOL5BE4wkQ2SMlDZU97hX86EilU/lUmkQUztTE6mx1EEPh7OmdqBtAvv8HdWpbrJS6tJj3n0CWdM6busNzRV3S9KTYhqvNiqWmuroiKgYhshMjmhTh9ptWhsF7970j/SbMrsPE1suR5z7DMC+P/Hs+y7ijrQAlhyAgccjbhjPygfeBTjzhNqy28EdkUh8C+DU9+z2v/oyeH791OncxHOs5y2AtTc7nb/f73TWPkD/qwBnjX8BoJ98VVBg/m8AAABLSURBVBgZjY7RCgAgCAOz///napEyR4h7ktsxtHUyGpnq2IvyJMJxgW+wELVAmVjnRzixiIUqV6xWvYtFB7zKLEQIXPCNzhQA/rIBthYoAU7mS/IAAAAASUVORK5CYII=');
 }
 .todayLine {
-  z-index: 10;
+  border: 1px solid #000000;
+}
+.projectMlsIcon {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAEDWlDQ1BJQ0MgUHJvZmlsZQAAOI2NVV1oHFUUPrtzZyMkzlNsNIV0qD8NJQ2TVjShtLp/3d02bpZJNtoi6GT27s6Yyc44M7v9oU9FUHwx6psUxL+3gCAo9Q/bPrQvlQol2tQgKD60+INQ6Ium65k7M5lpurHeZe58853vnnvuuWfvBei5qliWkRQBFpquLRcy4nOHj4g9K5CEh6AXBqFXUR0rXalMAjZPC3e1W99Dwntf2dXd/p+tt0YdFSBxH2Kz5qgLiI8B8KdVy3YBevqRHz/qWh72Yui3MUDEL3q44WPXw3M+fo1pZuQs4tOIBVVTaoiXEI/MxfhGDPsxsNZfoE1q66ro5aJim3XdoLFw72H+n23BaIXzbcOnz5mfPoTvYVz7KzUl5+FRxEuqkp9G/Ajia219thzg25abkRE/BpDc3pqvphHvRFys2weqvp+krbWKIX7nhDbzLOItiM8358pTwdirqpPFnMF2xLc1WvLyOwTAibpbmvHHcvttU57y5+XqNZrLe3lE/Pq8eUj2fXKfOe3pfOjzhJYtB/yll5SDFcSDiH+hRkH25+L+sdxKEAMZahrlSX8ukqMOWy/jXW2m6M9LDBc31B9LFuv6gVKg/0Szi3KAr1kGq1GMjU/aLbnq6/lRxc4XfJ98hTargX++DbMJBSiYMIe9Ck1YAxFkKEAG3xbYaKmDDgYyFK0UGYpfoWYXG+fAPPI6tJnNwb7ClP7IyF+D+bjOtCpkhz6CFrIa/I6sFtNl8auFXGMTP34sNwI/JhkgEtmDz14ySfaRcTIBInmKPE32kxyyE2Tv+thKbEVePDfW/byMM1Kmm0XdObS7oGD/MypMXFPXrCwOtoYjyyn7BV29/MZfsVzpLDdRtuIZnbpXzvlf+ev8MvYr/Gqk4H/kV/G3csdazLuyTMPsbFhzd1UabQbjFvDRmcWJxR3zcfHkVw9GfpbJmeev9F08WW8uDkaslwX6avlWGU6NRKz0g/SHtCy9J30o/ca9zX3Kfc19zn3BXQKRO8ud477hLnAfc1/G9mrzGlrfexZ5GLdn6ZZrrEohI2wVHhZywjbhUWEy8icMCGNCUdiBlq3r+xafL549HQ5jH+an+1y+LlYBifuxAvRN/lVVVOlwlCkdVm9NOL5BE4wkQ2SMlDZU97hX86EilU/lUmkQUztTE6mx1EEPh7OmdqBtAvv8HdWpbrJS6tJj3n0CWdM6busNzRV3S9KTYhqvNiqWmuroiKgYhshMjmhTh9ptWhsF7970j/SbMrsPE1suR5z7DMC+P/Hs+y7ijrQAlhyAgccjbhjPygfeBTjzhNqy28EdkUh8C+DU9+z2v/oyeH791OncxHOs5y2AtTc7nb/f73TWPkD/qwBnjX8BoJ98VVBg/m8AAABLSURBVBgZjY7RCgAgCAOz///napEyR4h7ktsxtHUyGpnq2IvyJMJxgW+wELVAmVjnRzixiIUqV6xWvYtFB7zKLEQIXPCNzhQA/rIBthYoAU7mS/IAAAAASUVORK5CYII=');
+}
+.projectMlsLine {
+  border: 1px dashed;
+}
+.globalMlsIcon {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAEDWlDQ1BJQ0MgUHJvZmlsZQAAOI2NVV1oHFUUPrtzZyMkzlNsNIV0qD8NJQ2TVjShtLp/3d02bpZJNtoi6GT27s6Yyc44M7v9oU9FUHwx6psUxL+3gCAo9Q/bPrQvlQol2tQgKD60+INQ6Ium65k7M5lpurHeZe58853vnnvuuWfvBei5qliWkRQBFpquLRcy4nOHj4g9K5CEh6AXBqFXUR0rXalMAjZPC3e1W99Dwntf2dXd/p+tt0YdFSBxH2Kz5qgLiI8B8KdVy3YBevqRHz/qWh72Yui3MUDEL3q44WPXw3M+fo1pZuQs4tOIBVVTaoiXEI/MxfhGDPsxsNZfoE1q66ro5aJim3XdoLFw72H+n23BaIXzbcOnz5mfPoTvYVz7KzUl5+FRxEuqkp9G/Ajia219thzg25abkRE/BpDc3pqvphHvRFys2weqvp+krbWKIX7nhDbzLOItiM8358pTwdirqpPFnMF2xLc1WvLyOwTAibpbmvHHcvttU57y5+XqNZrLe3lE/Pq8eUj2fXKfOe3pfOjzhJYtB/yll5SDFcSDiH+hRkH25+L+sdxKEAMZahrlSX8ukqMOWy/jXW2m6M9LDBc31B9LFuv6gVKg/0Szi3KAr1kGq1GMjU/aLbnq6/lRxc4XfJ98hTargX++DbMJBSiYMIe9Ck1YAxFkKEAG3xbYaKmDDgYyFK0UGYpfoWYXG+fAPPI6tJnNwb7ClP7IyF+D+bjOtCpkhz6CFrIa/I6sFtNl8auFXGMTP34sNwI/JhkgEtmDz14ySfaRcTIBInmKPE32kxyyE2Tv+thKbEVePDfW/byMM1Kmm0XdObS7oGD/MypMXFPXrCwOtoYjyyn7BV29/MZfsVzpLDdRtuIZnbpXzvlf+ev8MvYr/Gqk4H/kV/G3csdazLuyTMPsbFhzd1UabQbjFvDRmcWJxR3zcfHkVw9GfpbJmeev9F08WW8uDkaslwX6avlWGU6NRKz0g/SHtCy9J30o/ca9zX3Kfc19zn3BXQKRO8ud477hLnAfc1/G9mrzGlrfexZ5GLdn6ZZrrEohI2wVHhZywjbhUWEy8icMCGNCUdiBlq3r+xafL549HQ5jH+an+1y+LlYBifuxAvRN/lVVVOlwlCkdVm9NOL5BE4wkQ2SMlDZU97hX86EilU/lUmkQUztTE6mx1EEPh7OmdqBtAvv8HdWpbrJS6tJj3n0CWdM6busNzRV3S9KTYhqvNiqWmuroiKgYhshMjmhTh9ptWhsF7970j/SbMrsPE1suR5z7DMC+P/Hs+y7ijrQAlhyAgccjbhjPygfeBTjzhNqy28EdkUh8C+DU9+z2v/oyeH791OncxHOs5y2AtTc7nb/f73TWPkD/qwBnjX8BoJ98VVBg/m8AAABLSURBVBgZjY7RCgAgCAOz///napEyR4h7ktsxtHUyGpnq2IvyJMJxgW+wELVAmVjnRzixiIUqV6xWvYtFB7zKLEQIXPCNzhQA/rIBthYoAU7mS/IAAAAASUVORK5CYII=');
+}
+.globalMlsLine {
+  border: 1px solid;
+}
+.floatingLine {
+  position: absolute;
+  left: 0px;
+  top: 0px;
 }
 
     </style>
