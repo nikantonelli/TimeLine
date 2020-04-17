@@ -494,6 +494,8 @@ Ext.define('nantonelliTimeLineApp', {
                                     labelWidth: 150,
                                     xtype: 'rallycombobox',
                                     margin: 10,
+                                    stateful: true,
+                                    stateId: 'niksTimeline'+app.getContext().getProject(),
                                     multiSelect: true,
                                     displayField: 'StringValue',
                                     valueField: 'StringValue',
@@ -501,7 +503,7 @@ Ext.define('nantonelliTimeLineApp', {
                                     allowClear: false,
                                     store: records[0].stores[0],
                                     listeners: {
-                                        change: function(combobox, selected) {
+                                        select: function(combobox, selected) {
                                             app._addLines();
                                         },
                                         scope: app
