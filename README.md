@@ -11,11 +11,10 @@ Group by parent gives colour coded boxes on left with the children lumped togeth
 
 Colour bars are RAG status based on algorithm in the Agile Central manual pages, grey bars are planned dates if present. Hover over bars for the dates. Percentages can be based on story count or story points.
 
-If you have a custom field called Type (multi-value dropdown), you will get an extra selector to show Milestones based on that filter. With nothing selected, no milestones will show. It should remember you settings on a per project basis, and be persistent across logins/refreshes/etc., etc.
+If you have a custom field called Type (multi-value dropdown), you will get an extra selector to show Milestones based on that filter. With nothing selected, no milestones will show. It should remember your settings on a per project basis, and be persistent across logins/refreshes/etc., etc.
 
 ![alt text](https://github.com/nikantonelli/TimeLine/blob/master/Images/Image.png)
 
-Caveat: Does not show Milestones
 
 ## License
 
