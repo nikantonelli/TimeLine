@@ -26,7 +26,7 @@ Ext.define('nantonelliTimeLineApp', {
         ParentBoxWidth: 200,
         TimeLineBarHeight: 30,
         HeaderBoxHeight: 15,
-        MileStoneBoxColour: '#00A9E0' //Rally.util.Colors.cyan
+        TypeFieldName: 'c_Type'
     },
     items: [
         {
@@ -473,38 +473,47 @@ Ext.define('nantonelliTimeLineApp', {
 
         Rally.data.ModelFactory.getModel({
             type: 'Milestone',
+            context: app.getContext().getDataContext(),
             success: function(model) {
-                model.getField('c_Type').getAllowedValueStore({
-                    filters: [{
-                        property: 'StringValue',
-                        operator: "!=",
-                        value: null
-                    }]
-                }).load().then({
-                    success: function(records) {
-                        app.down('#headerBox').add({
-                            fieldLabel: 'Show Milestone Type',
-                            id: 'milestoneTypes',
-                            labelWidth: 150,
-                            xtype: 'rallycombobox',
-                            margin: 10,
-                            multiSelect: true,
-                            displayField: 'StringValue',
-                            valueField: 'StringValue',
-                            allowBlank: false,
-                            allowClear: false,
-                            store: records[0].stores[0],
-                            listeners: {
-                                change: function(combobox, selected) {
-                                    debugger;
-                                }
+                if  ( model.hasField(nantonelliTimeLineApp.TypeFieldName)) {
+                    var field = model.getField(nantonelliTimeLineApp.TypeFieldName);
+                    if (( field.attributeDefinition.AttributeType === "COLLECTION") &&
+                            (field.attributeDefinition.Constrained === true) &&
+                            (field.hidden === false)) {
+                        model.getField(nantonelliTimeLineApp.TypeFieldName).getAllowedValueStore({
+                            filters: [{
+                                property: 'StringValue',
+                                operator: "!=",
+                                value: null
+                            }]
+                        }).load().then({
+                            success: function(records) {
+                                app.down('#headerBox').add({
+                                    fieldLabel: 'Show Milestone Type',
+                                    id: 'milestoneTypes',
+                                    labelWidth: 150,
+                                    xtype: 'rallycombobox',
+                                    margin: 10,
+                                    multiSelect: true,
+                                    displayField: 'StringValue',
+                                    valueField: 'StringValue',
+                                    allowBlank: true,
+                                    allowClear: false,
+                                    store: records[0].stores[0],
+                                    listeners: {
+                                        change: function(combobox, selected) {
+                                            app._addLines();
+                                        },
+                                        scope: app
+                                    }
+                                });
+                            },
+                            failure: function(e) {
+                                console.log('Could not get Type field data on Milestones', e);
                             }
                         });
-                    },
-                    failure: function(e) {
-                        console.log('Could not get Type field data on Milestones', e);
                     }
-                });
+                }
             }
         });
         
@@ -600,49 +609,54 @@ Ext.define('nantonelliTimeLineApp', {
         var me = this;
         Ext.create('Rally.data.wsapi.Store',{
             model: 'Milestone',
-            autoLoad: true,
+            autoLoad: false,
             fetch: true,
             filters: filters,
             listeners: {
-                load: function(store, results) {
-                    if (store.getRecords().length) {
-                        me._milestoneStore = store;
-                        deferred.resolve(results);
+                load: function(store, results, success) {
+                    if (success) {
+                        if (store.getRecords().length && success) {
+                            me._milestoneStore = store;
+                            deferred.resolve(results);
+                        }
+                        else {
+                            deferred.resolve(null);
+                        }
                     }
                     else {
-                        deferred.resolve(null);
+                        console.log('Oh de bugger!');
                     }
                 }
             }
-        });
+        }).load();
         return deferred.promise;
 
     },
 
     _applyMilestoneFilter: function() {
+        var me = this;
         /** ~Get the current setting of the milestone types and
-         * apply that to the _milestoneStore
+         * apply that to the milestones given
         */
-       var mst = Ext.getCmp('milestoneTypes').value;    //An array of indexes
-       var filters = [];
-       _.each(mst, function(type) {
-           filters.push( 
-               {
-                   property: 'ValueIndex',
-                   value: type
-               }
-           );
-       });
-       this._milestoneStore.setFilter(Rally.data.wsapi.Filter.or(filters));
+        if (Ext.getCmp('milestoneTypes')) {
+            var mst = Ext.getCmp('milestoneTypes').value;    //An array of indexes
+            return _.filter(me._milestoneStore.getRecords(), function(record) {
+                return _.find(record.get(me.self.TypeFieldName)._tagsNameArray, function (tag) {
+                    return _.find(mst, function(type) { 
+                        return tag.Name === type;
+                    });
+                });
+            });
+        }
+        return [];
     },
 
     _addMilestones: function() {
         var me = this;
         this._fetchMilestones().then({
-            success: function(milestones) {
-                me._applyMilestoneFilter();
+            success: function() {
                 me._undrawMilestones();
-                me._drawMilestones();
+                me._drawMilestones(me._applyMilestoneFilter());
             },
             scope: me
         });
@@ -650,54 +664,37 @@ Ext.define('nantonelliTimeLineApp', {
 
     _undrawMilestones: function() {
 
+        var msbox = Ext.getCmp('milestoneBox');
+        msbox.removeAll();
+        this._addLine('Today', new Date(), 'today');
     },
 
-    _drawMilestones: function() {
+    _drawMilestones: function(milestones) {
         var me = this;
-        _.each(this._milestoneStore.getRecords(), function(milestone) {
+        _.each(milestones, function(milestone) {
             var typeCls = milestone.get('Projects').Count?'projectMls':'globalMls';
             var mls = me._addLine(milestone.get('Name'), milestone.get('TargetDate'), typeCls);
-            mls.getEl().setStyle( { borderColor: (milestone.get('DisplayColor') || '#000000')});
+            mls.getEl().setStyle( { borderColor: (milestone.get('DisplayColor').length?milestone.get('DisplayColor'): '#000000')});
         });
-    },
-
-    _getMilestoneClass: function() {
-
     },
 
     _addLine: function(title, date, typeCls) {
         var msbox = Ext.getCmp('milestoneBox');
-        var linebox = Ext.getCmp('lineBox');
-        //Create a thing to add to month box
-        var margin = (Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000) - 4;
-//        var margin = '0 0 0 ' + ((Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000) - 4);
-console.log('adding', title, date, typeCls);
         
         //Create a thing to add to lineBox
         thisLine = Ext.create('Ext.container.Container', {
-            height: linebox.getHeight(),
-            width: '1px',
-            style: {
-                position: 'absolute',
-                top: 0,
-                left: Math.trunc(margin),
-            },
-
+            height: Ext.getCmp('lineBox').getHeight(),
+            width: '2px',
+            cls: 'overlayLine',
             margin: '0 0 0 ' + (Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000)
         });
         thisLine.addCls(typeCls+'Line');
-        thisLine.render(msbox.getEl());
+//        thisLine.render(msbox.getEl());
+        msbox.add(thisLine);
         thisIcon = Ext.create('Ext.container.Container', {
             height: '10px',
             width: '10px',
-
-//            cls: 'floatingLine',
-            style: {
-                position: 'absolute',
-                top: 0,
-                left: Math.trunc(margin),
-            },
-//            margin: margin,
+            cls: 'overlayLine',
             margin: '0 0 0 ' + (((Ext.Date.getElapsed( stats.start, date) * stats.pixelsPerDay)/(24 * 3600 * 1000)) - 4),
 
             listeners: {
@@ -710,7 +707,8 @@ console.log('adding', title, date, typeCls);
             }
         });
         thisIcon.addCls(typeCls+'Icon');
-        thisIcon.render(msbox.getEl());
+//        thisIcon.render(msbox.getEl());
+        msbox.add(thisIcon);
         return thisLine;
     },
 
@@ -822,13 +820,18 @@ console.log('adding', title, date, typeCls);
                     treeBox.suspendLayout = false;
                     timeLineBox.updateLayout();
                     treeBox.updateLayout();
-                    app._addLine('Today', new Date(), 'today');
-                    app._addMilestones();
+                    app._addLines();
                 },
                 scope: app
             }
         });
     },
+
+    _addLines: function() {
+        this._addLine('Today', new Date(), 'today');
+        this._addMilestones();
+    },
+
     _createTitleBoxForItem: function(app, item) {
         var titleRec = {};
         titleRec.colour = nantonelliTimeLineApp.HdrColour;
@@ -1024,9 +1027,7 @@ console.log('adding', title, date, typeCls);
             width: stats.daysDuration * stats.pixelsPerDay,
             height: '10px',
             id: 'milestoneBox',
-            style: {
-                backgroundColor: nantonelliTimeLineApp.MileStoneBoxColour
-            }
+            cls: 'milestoneboxcls'
         });
         milestoneBox.addCls('mlbox');
         lineBox.add(milestoneBox);
